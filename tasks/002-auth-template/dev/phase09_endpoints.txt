@@ -1,0 +1,15 @@
+frontend/src/pages/RegisterPage.tsx:2:// с клиентской валидацией. POST /auth/register; server validation показываем
+frontend/src/pages/RegisterPage.tsx:17:// Клиентская валидация полей, которые отправляются на /auth/register.
+frontend/src/pages/RegisterPage.tsx:94:      // fastapi-users /auth/register получает только email и password.
+frontend/src/pages/AccountPage.tsx:1:// Страница аккаунта: GET /users/me при входе, форма username/email
+frontend/src/pages/AccountPage.tsx:2:// + multipart upload аватара (picture) через POST /auth/account.
+frontend/src/context/AuthContext.tsx:2:// GET /users/me, обновление после login/account,
+frontend/src/context/AuthContext.tsx:31:      // fastapi-users /users/me возвращает User (или null при 401).
+frontend/src/api/auth.ts:4:// /auth/register (JSON, 201), /auth/account (multipart),
+frontend/src/api/auth.ts:5:// /users/me (JSON, 401 для анонима).
+frontend/src/api/auth.ts:16:// refresh через /users/me (возвращает UserRead).
+frontend/src/api/auth.ts:22:  return postForm<unknown>('/auth/jwt/login', form).then(() => getJson<User>('/users/me'));
+frontend/src/api/auth.ts:32:  return postJson<User>('/auth/register', body);
+frontend/src/api/auth.ts:36:  const user = await getJson<User>('/users/me');
+frontend/src/api/auth.ts:49:  return postMultipart<MessageResp & { user: User }>('/auth/account', formData);
+frontend/src/api/auth.ts:55:  return getJson<User>('/users/me').catch((err) => {

@@ -1,0 +1,6 @@
+> frontend@0.0.1 build
+> tsc && vite build
+
+sh: 1: tsc: not found
+Error: (none)
+Exit Code: 127

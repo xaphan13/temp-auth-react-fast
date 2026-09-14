@@ -1,0 +1,2 @@
+All checks passed!
+PASS: ruff check main.py setup_frontend.py auth_users/router.py

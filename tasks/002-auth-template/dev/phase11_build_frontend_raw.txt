@@ -1,0 +1,13 @@
+
+> frontend@0.0.1 build
+> tsc && vite build
+
+src/components/ArtManageForms.tsx(6,28): error TS2307: Cannot find module '../api/artManage' or its corresponding type declarations.
+src/components/ArtManageForms.tsx(8,38): error TS2307: Cannot find module '../api/artManage' or its corresponding type declarations.
+src/components/SectionMenu.tsx(12,29): error TS2307: Cannot find module '../api/blog' or its corresponding type declarations.
+src/components/SectionMenu.tsx(13,15): error TS2305: Module '"../types"' has no exported member 'Section'.
+src/components/SectionMenu.tsx(21,14): error TS7006: Parameter 'data' implicitly has an 'any' type.
+src/components/ThemeSelect.tsx(1,36): error TS2307: Cannot find module '../hooks/useTheme' or its corresponding type declarations.
+src/components/ThemeSelect.tsx(25,20): error TS7006: Parameter 't' implicitly has an 'any' type.
+
+build_exit=2

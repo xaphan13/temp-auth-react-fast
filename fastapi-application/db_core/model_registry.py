@@ -12,7 +12,6 @@ def load_model_registry() -> None:
         OrderProductAssociation,
         Product,
     )
-    from md_articles.models import BlogPost, BlogUser
 
     # Имена импортов намеренно используются только для регистрации классов в metadata.
-    _ = (BlogPost, BlogUser, Order, OrderProductAssociation, Product, User)
+    _ = (Order, OrderProductAssociation, Product, User)

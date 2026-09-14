@@ -1,155 +1,77 @@
 @import "tailwindcss";
 
-/* Стили сайта на CSS-переменных, 4 темы: dark (дефолт), light, midnight, aurora.
-   Тема применяется атрибутом data-theme на <html> (hooks/useTheme.ts),
-   переключение мгновенное, без перезагрузки.
-   Подсветка кода — внешний highlight.js с CDN: активная тёмная таблица
-   переключается по disabled у <link data-hljs-dark> (hooks/useHljsTheme.ts),
-   код всегда на тёмном фоне в любой теме сайта. */
-
 :root {
-  --header-height: 4rem;
-  --radius: 0.75rem;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #1f2937;
+  background: #f3f4f6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
-/* === Тема «Тёмная» (дефолт) ================================================ */
-
-[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #1e1e1e;
-  --text: #e0e0e0;
-  --text-muted: #a0a0a0;
-  --border: #3a3a3a;
-  --card-bg: #2a2a2a;
-  --link: #61dafb;
-  --link-hover: #9b59b6;
-  --accent: #61dafb;
-  --accent-2: #ff6f61;
-  --header-bg: linear-gradient(135deg, #354754 0%, #2a3a46 100%);
-  --header-link: #cbd5db;
-  --header-link-hover: #ffffff;
-  --footer-bg: #232323;
-  --focus-ring: rgba(97, 218, 251, 0.35);
-  --btn-grad: linear-gradient(135deg, #61dafb 0%, #9b59b6 100%);
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+* {
+  box-sizing: border-box;
 }
-
-/* === Тема «Светлая» ======================================================== */
-
-[data-theme="light"] {
-  color-scheme: light;
-  --bg: #f7f3ec;
-  --text: #212529;
-  --text-muted: #6c757d;
-  --border: #e0d8cc;
-  --card-bg: #fffdf8;
-  --link: #2563eb;
-  --link-hover: #1d4ed8;
-  --accent: #2563eb;
-  --accent-2: #c0338e;
-  --header-bg: linear-gradient(135deg, #354754 0%, #2a3a46 100%);
-  --header-link: #e9ecef;
-  --header-link-hover: #ffffff;
-  --footer-bg: #ede8de;
-  --focus-ring: rgba(37, 99, 235, 0.35);
-  --btn-grad: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-  --shadow: 0 10px 30px rgba(33, 37, 41, 0.12);
-}
-
-/* === Тема «Полночь» ========================================================
-   Глубокий сине-фиолетовый, фирменный градиент фиолетовый -> розовый. */
-
-[data-theme="midnight"] {
-  color-scheme: dark;
-  --bg: #0f0d1c;
-  --text: #dcd8f0;
-  --text-muted: #9a92c0;
-  --border: #2e2a4d;
-  --card-bg: #1a1730;
-  --link: #a78bfa;
-  --link-hover: #c4b5fd;
-  --accent: #a78bfa;
-  --accent-2: #f0abfc;
-  --header-bg: linear-gradient(135deg, #1a1730 0%, #221e3f 60%, #2b1a4a 100%);
-  --header-link: #cfc9ec;
-  --header-link-hover: #ffffff;
-  --footer-bg: #14112a;
-  --focus-ring: rgba(167, 139, 250, 0.4);
-  --btn-grad: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
-  --shadow: 0 10px 30px rgba(139, 92, 246, 0.18);
-}
-
-/* === Тема «Аврора» =========================================================
-   Тёмно-изумрудная с холодным бирюзовым акцентом. */
-
-[data-theme="aurora"] {
-  color-scheme: dark;
-  --bg: #0a1412;
-  --text: #d4e4dd;
-  --text-muted: #8fb3a3;
-  --border: #1f3a2e;
-  --card-bg: #122019;
-  --link: #34d399;
-  --link-hover: #6ee7b7;
-  --accent: #34d399;
-  --accent-2: #5eead4;
-  --header-bg: linear-gradient(135deg, #0f1c15 0%, #122019 60%, #12352a 100%);
-  --header-link: #bfe0d0;
-  --header-link-hover: #ffffff;
-  --footer-bg: #0d1a12;
-  --focus-ring: rgba(52, 211, 153, 0.4);
-  --btn-grad: linear-gradient(135deg, #10b981 0%, #22d3ee 100%);
-  --shadow: 0 10px 30px rgba(16, 185, 129, 0.16);
-}
-
-/* === Базовая типографика =================================================== */
 
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
-  line-height: 1.7;
+  min-width: 320px;
+  min-height: 100vh;
   margin: 0;
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  background: #f3f4f6;
+  color: #1f2937;
+  line-height: 1.5;
 }
 
 a {
-  color: var(--link);
+  color: #2563eb;
   text-decoration: none;
-  transition: color 0.2s ease;
 }
 
 a:hover {
-  color: var(--link-hover);
+  color: #1d4ed8;
   text-decoration: underline;
-  text-underline-offset: 4px;
 }
 
-/* === Шапка ================================================================= */
+button,
+input {
+  font: inherit;
+}
+
+.container {
+  width: min(100% - 2rem, 72rem);
+  margin-inline: auto;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+}
+
+.app-shell > main {
+  width: min(100% - 2rem, 72rem);
+  margin-inline: auto;
+  padding: 2rem 0 3rem;
+}
 
 .site-header {
-  background: var(--header-bg);
-  box-shadow: var(--shadow);
-  border-bottom: 1px solid var(--border);
-  transition: background 0.3s ease;
+  background: #111827;
+  color: #f9fafb;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 15%);
 }
 
 .header-inner {
-  min-height: var(--header-height);
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  padding-top: 0.6rem;
-  padding-bottom: 0.6rem;
+  gap: 1rem;
+  min-height: 4rem;
+  padding-block: 0.5rem;
 }
 
 .brand {
-  font-size: 1.25rem;
+  flex: 0 0 auto;
+  color: #f9fafb;
+  font-size: 1.125rem;
   font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.02em;
-  padding-left: 0.75rem;
 }
 
 .brand:hover {
@@ -157,408 +79,142 @@ a:hover {
   text-decoration: none;
 }
 
-.brand-accent {
-  background: var(--btn-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 .nav-links {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  flex: 1;
+  gap: 0.35rem;
+  margin-left: auto;
 }
 
 .nav-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
   padding: 0.35rem 0.75rem;
-  border-radius: 9999px;
-  color: var(--header-link);
-  font-weight: 500;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
   background: transparent;
-  border: none;
-  font-size: 1rem;
-  line-height: 1.5;
+  color: #d1d5db;
   cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1.25;
 }
 
 .nav-link:hover,
-.nav-link:focus-visible {
-  color: var(--header-link-hover);
-  background: rgba(255, 255, 255, 0.12);
+.nav-link:focus-visible,
+.nav-link.active {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #fff;
   text-decoration: none;
 }
 
-.nav-link.active {
-  color: var(--header-link-hover);
-  background: rgba(255, 255, 255, 0.2);
-}
-
 .nav-link.as-button {
-  font-family: inherit;
+  appearance: none;
 }
 
-.header-selects {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.header-avatar {
+  border: 2px solid #9ca3af;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.theme-select {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
-  border-radius: 9999px;
-  padding: 0.3rem 0.9rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.theme-select:focus-visible {
-  outline: 2px solid var(--focus-ring);
-}
-
-.theme-select option {
-  color: #1e1e1e;
-  background: #f7f3ec;
-}
-
-/* === Каркас приложения (app-shell, левое меню) ============================ */
-
-/* Корневой лейаут: шапка сверху, тело занимает всё свободное место,
-   футер внизу. Ширина — 100% viewport без фиксированных max-width. */
-.app-shell {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  min-height: 100vh;
+.page-stub {
   width: 100%;
+  padding: 1rem 0;
 }
 
-/* Тело: левое меню + контент. Ширина меню адаптивная в 100–150px,
-   контент занимает всю оставшуюся ширину через 1fr (minmax(0,...) чтобы
-   длинный контент мог ужиматься без выпирания). */
-.app-body {
-  display: grid;
-  grid-template-columns: clamp(100px, 12vw, 150px) minmax(0, 1fr);
-  width: 100%;
-}
-
-.app-body > main {
-  min-width: 0;
-  padding: 1.5rem 1.25rem 2rem;
-}
-
-/* Левое меню: липнет к верху вьюпорта при прокрутке контента статьи.
-   position: sticky фиксирует элемент относительно ближайшего скролл-контейнера;
-   align-self: start обязателен в grid-колонке — иначе элемент растягивается
-   на всю высоту строки, вылезает за вьюпорт и не «прилипает». */
-.left-menu {
-  background: var(--card-bg);
-  border-right: 1px solid var(--border);
-  padding: 1rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  min-width: 0;
-  position: sticky;
-  top: 0;
-  align-self: start;
-  max-height: 100vh;
-  overflow-y: auto;
-}
-
-/* Пункт меню: на всю ширину боковой колонки, текст по центру,
-   заметный hover (заливка акцентом). font-size в rem — масштабируется
-   браузером вместе с zoom. */
-.menu-item {
-  display: block;
-  width: 100%;
-  padding: 0.6rem 0.5rem;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 0.95rem;
-  line-height: 1.3;
-  text-align: center;
-  cursor: pointer;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease, transform 0.15s ease;
-}
-
-.menu-item:hover,
-.menu-item:focus-visible {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  outline: none;
-  transform: translateX(2px);
-}
-
-.menu-item:active {
-  transform: translateX(2px) scale(0.98);
-}
-
-/* Активный пункт меню разделов (NavLink в SectionMenu). Подсветка
-   заметнее, чем hover, но без агрессивного transform — чтобы не
-   конфликтовать с :hover/:active (transform на hover отменяем). */
-.menu-item.active,
-.menu-item.active:hover,
-.menu-item.active:focus-visible {
-  background: var(--btn-grad);
-  color: #fff;
-  border-color: transparent;
-  font-weight: 600;
-  transform: none;
-  box-shadow: var(--shadow);
-}
-
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  box-shadow: var(--shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
-}
-
-.card-hover:hover {
-  transform: translateY(-3px);
-}
-
-h1,
-h2,
-h3 {
-  color: var(--text);
-}
-
-h1 {
-  background: var(--btn-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.page-stub h1,
+.auth-page h1 {
+  margin-top: 0;
+  color: #111827;
+  line-height: 1.2;
 }
 
 .text-muted {
-  color: var(--text-muted);
+  color: #6b7280;
 }
 
-.badge {
-  display: inline-block;
-  padding: 0.15rem 0.65rem;
-  border-radius: 9999px;
-  background: var(--btn-grad);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 600;
+.auth-page {
+  width: min(100%, 28rem);
+  margin: 1rem auto;
+  padding: 1.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
 }
 
-.btn {
-  display: inline-block;
-  padding: 0.5rem 1.25rem;
-  border: none;
-  border-radius: 9999px;
-  background: var(--btn-grad);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: var(--shadow);
-  transition: filter 0.2s ease, transform 0.2s ease;
-  font-size: 1rem;
-}
-
-.btn:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--link);
-  border: 1px solid var(--border);
-  box-shadow: none;
-}
-
-.btn-ghost:hover {
-  color: var(--link-hover);
-  border-color: var(--link);
-}
-
-.site-footer {
-  margin-top: 2rem;
-  padding: 1rem 0;
-  background-color: var(--footer-bg);
-  border-top: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease;
-}
-
-/* Страница-заглушка фазы 3 */
-.page-stub {
-  width: 100%;
-  box-sizing: border-box;
-  margin: 2rem 0;
-  padding: 0 1.5rem;
-}
-
-.page-stub h1 {
-  margin-bottom: 0.5rem;
-}
-
-/* === Управление реестром (/art_manage) ===================================== */
-
-.art-manage-page {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0 1rem;
-}
-
-.registry-error {
-  border: 1px solid var(--accent-2);
-  border-radius: var(--radius);
-  padding: 0.75rem 1rem;
-  margin: 1rem 0;
-  background: var(--card-bg);
-}
-
-.registry-table-wrap {
-  overflow-x: auto;
-  margin: 1rem 0 2rem;
-}
-
-.registry-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.registry-table th,
-.registry-table td {
-  border-bottom: 1px solid var(--border);
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.registry-table th {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.mono {
-  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
-  font-size: 0.9rem;
-}
-
-/* Флаги complete/file_exists поверх базового .badge */
-.badge-ok {
-  background: var(--link);
-  color: var(--bg);
-}
-
-.badge-warn {
-  background: var(--accent-2);
-  color: #fff;
-}
-
-/* Компактные формы meta внутри таблицы */
-.meta-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
-  align-items: flex-end;
-}
-
-.meta-form .btn,
-.meta-form .btn-ghost {
-  font-size: 0.875rem;
-  padding: 0.35rem 0.9rem;
-}
-
-.meta-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.meta-field label {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-}
-
-.meta-field input,
-.meta-field select {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
-  padding: 0.3rem 0.6rem;
-  font-size: 0.875rem;
-}
-
-.meta-field input:focus-visible,
-.meta-field select:focus-visible {
-  outline: 2px solid var(--focus-ring);
-}
-
-/* Общие поля форм: стили для FormField фазы 5 */
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
   margin-bottom: 1rem;
 }
 
 .form-field label {
-  color: var(--text-muted);
-  font-size: 0.9rem;
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .form-field input {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
-  padding: 0.5rem 0.75rem;
-  font-size: 1rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #9ca3af;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: #111827;
 }
 
 .form-field input:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+  border-color: #2563eb;
 }
 
 .form-field-invalid input {
-  border-color: var(--accent-2);
+  border-color: #dc2626;
 }
 
 .form-errors {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.2rem;
 }
 
 .form-error-text {
-  color: var(--accent-2);
-  font-size: 0.8rem;
+  color: #b91c1c;
+  font-size: 0.875rem;
 }
 
-/* Страницы авторизации и аккаунта (фаза 5) */
-.auth-page {
-  max-width: 26rem;
-  margin: 2rem auto;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-primary:focus-visible {
+  background: #1d4ed8;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .account-avatar {
@@ -569,662 +225,93 @@ h1 {
 }
 
 .account-avatar img {
+  border: 1px solid #d1d5db;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  object-fit: cover;
 }
 
-/* Список записей без файла на диске */
-.missing-list {
-  padding-left: 1.25rem;
-  margin-bottom: 2rem;
+.site-footer {
+  padding: 1rem 0;
+  border-top: 1px solid #d1d5db;
+  background: #e5e7eb;
+  color: #4b5563;
+  font-size: 0.9rem;
 }
 
-.add-all-block {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 2rem 0;
-}
-
-/* Тост-уведомления (Toast.tsx, фаза 5) */
 .toast-container {
   position: fixed;
-  top: calc(var(--header-height) + 0.75rem);
+  top: 1rem;
   right: 1rem;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  z-index: 1000;
+  width: min(24rem, calc(100vw - 2rem));
 }
 
 .toast {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
-  min-width: 16rem;
-  max-width: 24rem;
   padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  border: 1px solid #9ca3af;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 15%);
 }
 
 .toast-message {
   flex: 1;
-  font-size: 0.925rem;
 }
 
 .toast-close {
+  border: 0;
+  padding: 0;
   background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1;
+  color: #6b7280;
   cursor: pointer;
-  padding: 0 0.15rem;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .toast-close:hover {
-  color: var(--text);
+  color: #111827;
 }
 
 .toast-success {
-  border-color: var(--link);
+  border-color: #16a34a;
 }
 
 .toast-danger {
-  border-color: var(--accent-2);
+  border-color: #dc2626;
 }
 
 .toast-warning {
-  border-color: var(--accent-2);
+  border-color: #d97706;
 }
 
-.toast-info {
-  border-color: var(--link);
+.toast-info,
+.toast-message {
+  border-color: #2563eb;
 }
 
-/* Код всегда на тёмном фоне в любой теме сайта: фон задаёт активная
-   тёмная таблица hljs, здесь только контекст блока. */
-pre {
-  border-radius: 0.5rem;
-  padding: 1rem;
-  overflow-x: auto;
-}
-
-/* === Пагинация (Pagination.tsx) ============================================
-   Блок выравнивается по центру, кнопки .page-btn используют токены темы:
-   в покое похожи на .menu-item (var(--card-bg)/var(--border)), при hover —
-   лёгкая подсветка акцентом, .active — градиентом как .menu-item.active. */
-.pagination {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem 1.25rem;
-  margin-top: 1.5rem;
-}
-
-.pagination-nav,
-.pagination-size {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.pagination-pages {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.pagination-counter {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  padding: 0 0.4rem;
-  white-space: nowrap;
-}
-
-.pagination-size-label {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-right: 0.25rem;
-}
-
-.page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.25rem;
-  padding: 0.4rem 0.85rem;
-  background: var(--card-bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 9999px;
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease, filter 0.2s ease;
-}
-
-.page-btn:hover:not(:disabled):not(.active),
-.page-btn:focus-visible:not(:disabled):not(.active) {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  outline: none;
-}
-
-.page-btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
-}
-
-/* Активная кнопка (текущая страница / выбранный размер страницы) —
-   градиентом, как .menu-item.active. */
-.page-btn.active,
-.page-btn.active:hover,
-.page-btn.active:focus-visible {
-  background: var(--btn-grad);
-  color: #fff;
-  border-color: transparent;
-  font-weight: 600;
-  box-shadow: var(--shadow);
-}
-
-.page-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
-  filter: none;
-}
-
-/* === Карточка статьи в одну строку (ArticleCard.tsx) ========================
-   Заголовок + автор + бейдж языка — на одной горизонтальной линии.
-   Длинный заголовок ужимается с эллипсисом, бейдж языка не сжимается.
-   Заголовок — анимированный многоцветный градиент: 5 сочных оттенков
-   для тёмных тем (dark/midnight/aurora), насыщенный спектр для светлой
-   темы переопределён в селекторе [data-theme="light"] ниже.
-   Анимация отключается при prefers-reduced-motion для доступности. */
-.card-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 0.85rem;
-}
-
-.card-title-grad {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background: linear-gradient(
-    90deg,
-    #ff6b6b 0%,
-    #feca57 25%,
-    #48dbfb 50%,
-    #ff9ff3 75%,
-    #54a0ff 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  background-position: 0% 50%;
-  animation: card-title-gradient 6s ease-in-out infinite alternate;
-}
-
-.card-author {
-  margin: 0;
-  font-size: 0.875rem;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.card-lang {
-  flex-shrink: 0;
-}
-
-@keyframes card-title-gradient {
-  from {
-    background-position: 0% 50%;
+@media (max-width: 640px) {
+  .header-inner {
+    align-items: flex-start;
+    flex-direction: column;
   }
-  to {
-    background-position: 100% 50%;
+
+  .nav-links {
+    justify-content: flex-start;
+    margin-left: 0;
   }
-}
 
-[data-theme="light"] .card-title-grad {
-  /* На светлом var(--card-bg) (#fffdf8) светлые яркие цвета сливаются —
-     заменяем на насыщенный контрастный спектр. background-size и
-     свойства clip/transparent/color наследуются от основного правила. */
-  background: linear-gradient(
-    90deg,
-    #e74c3c 0%,
-    #d97706 25%,
-    #2563eb 50%,
-    #8b5cf6 75%,
-    #db2777 100%
-  );
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card-title-grad {
-    animation: none;
-    background-position: 0% 50%;
+  .app-shell > main {
+    width: min(100% - 1.5rem, 28rem);
+    padding-top: 1.5rem;
   }
-}
 
-/* === Управление реестром: список статей и фильтры ==========================
-   Вынесено из исходной таблицы в кликабельный список. Стили
-   .registry-item/.registry-item.active умышленно повторяют
-   .menu-item/.menu-item.active — пользователь уже знаком с этим
-   визуальным языком по разделам в боковом меню. */
-
-/* Блок фильтров: флекс, перенос строк при нехватке ширины, поиск
-   не ужимается чекбоксами благодаря flex-basis + min-width. */
-.registry-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1rem;
-  margin: 1rem 0 1.25rem;
-}
-
-.registry-search {
-  flex: 1 1 16rem;
-  min-width: 12rem;
-  max-width: 28rem;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 9999px;
-  color: var(--text);
-  padding: 0.45rem 0.95rem;
-  font-size: 0.95rem;
-  font-family: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.registry-search:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--focus-ring);
-}
-
-/* Чекбокс-фильтр как метка: подпись рядом с чекбоксом, общий клик
-   по лейблу переключает — стандартное поведение <label>. */
-.registry-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  color: var(--text);
-  font-size: 0.95rem;
-  user-select: none;
-}
-
-.registry-filter input {
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.registry-count {
-  margin-left: auto;
-  font-size: 0.9rem;
-  white-space: nowrap;
-}
-
-/* Список статей: вертикальный без маркеров, разнесённый. */
-.registry-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-/* Пункт списка: карточка-«плитка». На hover/active/focus — как .menu-item:
-   та же подсветка акцентом, чтобы UX был единым по проекту. */
-.registry-item {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 0.65rem 0.9rem;
-  color: var(--text);
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease, transform 0.15s ease;
-}
-
-.registry-item:hover,
-.registry-item:focus-visible {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  outline: none;
-  transform: translateX(2px);
-}
-
-.registry-item:active {
-  transform: translateX(2px) scale(0.99);
-}
-
-/* Активный (выбранный для редактирования) — градиентом, как
-   .menu-item.active, чтобы было видно «этот пункт сейчас открыт». */
-.registry-item.active,
-.registry-item.active:hover,
-.registry-item.active:focus-visible {
-  background: var(--btn-grad);
-  color: #fff;
-  border-color: transparent;
-  font-weight: 600;
-  transform: none;
-  box-shadow: var(--shadow);
-}
-
-/* Заголовок статьи в пункте списка: крупно, с эллипсисом на длинных
-   названиях, чтобы плитка была одной строкой. */
-.registry-item-title {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* В активном пункте автор/язык плохо читаются на белом — оставляем
-   лёгкую прозрачность. В обычном — приглушённый цвет токена. */
-.registry-item-meta {
-  margin-top: 0.2rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.registry-item.active .registry-item-meta {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.registry-empty {
-  margin: 1rem 0;
-}
-
-.registry-edit-file {
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
-}
-
-/* === Боковая панель-диалог (SidePanel.tsx) ==================================
-   Затемнение на всю область вьюпорта + панель, выезжающая справа.
-   z-index выше тостов (toast-container имеет 1000) и контента — иначе
-   панель «утонула» бы в скролле основной страницы. Анимация —
-   transform translateX (0 → 0, opacity 0 → 1), выключается через
-   prefers-reduced-motion. */
-
-.side-panel-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 1100;
-  display: flex;
-  justify-content: flex-end;
-  animation: side-panel-fade-in 0.2s ease-out;
-}
-
-.side-panel {
-  position: relative;
-  width: min(480px, 92vw);
-  max-width: 100%;
-  background: var(--card-bg);
-  border-left: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  animation: side-panel-slide-in 0.25s ease-out;
-}
-
-.side-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.side-panel-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.side-panel-close {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 9999px;
-  color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background-color 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.side-panel-close:hover,
-.side-panel-close:focus-visible {
-  background: var(--accent-2);
-  color: #fff;
-  border-color: var(--accent-2);
-  outline: none;
-}
-
-.side-panel-body {
-  padding: 1.25rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
-@keyframes side-panel-slide-in {
-  from {
-    transform: translateX(100%);
+  .auth-page {
+    padding: 1.25rem;
   }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes side-panel-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .side-panel,
-  .side-panel-overlay {
-    animation: none;
-  }
-}
-
-/* === Markdown-контент (статьи блога, .markdown-content) ====================
-   Серверный рендер python-markdown. Здесь — макет/типографика на токенах тем.
-   Цвета блоков кода <pre> задают 15 hljs-тем через link-swap — не трогаем.
-   Зебра таблиц: color-mix(in srgb, var(--text) 5%, transparent) — видна и в
-   тёмных, и в светлой темах без хардкода конкретных оттенков. */
-
-.markdown-content {
-  line-height: 1.7;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  color: var(--text);
-}
-
-.markdown-content > * + * {
-  margin-top: 1rem;
-}
-
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3,
-.markdown-content h4,
-.markdown-content h5,
-.markdown-content h6 {
-  color: var(--text);
-  line-height: 1.3;
-  font-weight: 600;
-  margin-top: 1.75rem;
-  margin-bottom: 0.6rem;
-}
-
-.markdown-content h1 { font-size: 1.85rem; }
-.markdown-content h2 { font-size: 1.55rem; }
-.markdown-content h3 { font-size: 1.3rem; }
-.markdown-content h4 { font-size: 1.15rem; }
-.markdown-content h5 { font-size: 1.05rem; }
-.markdown-content h6 { font-size: 0.95rem; color: var(--text-muted); }
-
-.markdown-content p {
-  margin: 0;
-}
-
-.markdown-content a {
-  color: var(--link);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.markdown-content a:hover {
-  color: var(--link-hover);
-}
-
-.markdown-content ul,
-.markdown-content ol {
-  margin: 0;
-  padding-left: 1.6rem;
-  color: var(--text);
-}
-
-.markdown-content ul { list-style: disc; }
-.markdown-content ol { list-style: decimal; }
-
-.markdown-content li + li {
-  margin-top: 0.35rem;
-}
-
-.markdown-content blockquote {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border-left: 4px solid var(--border);
-  background: var(--card-bg);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  color: var(--text-muted);
-}
-
-.markdown-content blockquote > * + * {
-  margin-top: 0.5rem;
-}
-
-.markdown-content hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 1.75rem 0;
-}
-
-.markdown-content img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  border-radius: var(--radius);
-  margin: 0.5rem 0;
-}
-
-/* Таблицы: border-collapse: separate + border-spacing: 0 — чтобы
-   скругление внешних углов (border-radius на table) работало корректно;
-   при collapse скруглить можно только маленькими хаками. Рамки ячеек —
-   через border-bottom, последняя строка без нижней рамки (border-bottom:
-   none на tr:last-child td). */
-.markdown-content table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin: 0.5rem 0;
-  color: var(--text);
-  font-size: 0.95rem;
-}
-
-.markdown-content th,
-.markdown-content td {
-  border-bottom: 1px solid var(--border);
-  padding: 0.55rem 0.85rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.markdown-content th {
-  background: var(--card-bg);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.markdown-content tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.markdown-content tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-}
-
-/* Встроенный код — только вне <pre>. Темы hljs стилизуют <code> внутри
-   <pre>, поэтому селектор ограничен :not(pre) > code, чтобы не
-   перебивать подсветку. */
-.markdown-content :not(pre) > code {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  padding: 0.1rem 0.4rem;
-  font-size: 0.9em;
-  color: var(--text);
-}
-
-/* Блок кода: глобальное правило pre уже даёт padding/border-radius/
-   overflow-x. Перебиваем только margin, чтобы не складывался с
-   > * + * сверху, и фиксируем шрифт для дочернего <code>, чтобы
-   hljs-темы не сбрасывали размер при своём background. */
-.markdown-content pre {
-  margin: 0;
-}
-
-.markdown-content pre > code {
-  font-size: 0.9rem;
 }

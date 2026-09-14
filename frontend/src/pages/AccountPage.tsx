@@ -1,9 +1,7 @@
-// Страница аккаунта: GET /api/blog/account при входе, форма username/email
-// + multipart upload аватара (picture) через POST /api/blog/account
-// (postMultipart с полем csrf_token — см. api/client.ts). После успеха —
-// обновление пользователя в AuthContext + toast. Показ текущего аватара.
-// Доступ только для авторизованных (RequireAuth в App.tsx), 403 от API —
-// страховка.
+// Страница аккаунта: GET /users/me при входе, форма username/email
+// + multipart upload аватара (picture) через POST /auth/account.
+// После успеха — обновление пользователя в AuthContext + toast. Показ текущего аватара.
+// Доступ только для авторизованных (RequireAuth в App.tsx), 401/API-сбой — страховка.
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { getAccount, updateAccount, extractErrors, MessageResp } from '../api/auth';
@@ -35,8 +33,7 @@ export default function AccountPage() {
         setUser(data.user);
       })
       .catch((err) => {
-        // 403/API-сбой: RequireAuth обычно перехватит раньше,
-        // здесь остаётся показать ошибку.
+        // RequireAuth обычно перехватит 401 раньше, здесь остаётся показать ошибку.
         if (cancelled) return;
         const message =
           err instanceof ApiError

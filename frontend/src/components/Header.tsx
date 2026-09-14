@@ -1,51 +1,46 @@
 import { NavLink, Link } from 'react-router-dom';
-import ThemeSelect from './ThemeSelect';
-import HljsThemeSelect from './HljsThemeSelect';
-import type { Theme } from '../hooks/useTheme';
 import type { User } from '../types';
 
 interface HeaderProps {
   user: User | null;
-  theme: Theme;
-  onThemeChange: (theme: string) => void;
-  hljsTheme: string;
-  onHljsThemeChange: (theme: string) => void;
   onLogout: () => void;
 }
 
-// Шапка сайта: навигация, селекторы темы и подсветки кода.
-// Пользователь приходит из AuthContext (прокидывается Layout),
-// кнопка «Выход» вызывает POST /api/blog/logout через Layout.
-export default function Header({
-  user,
-  theme,
-  onThemeChange,
-  hljsTheme,
-  onHljsThemeChange,
-  onLogout,
-}: HeaderProps) {
+// Шапка auth-шаблона: домашняя страница и маршруты авторизации.
+export default function Header({ user, onLogout }: HeaderProps) {
   const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'nav-link active' : 'nav-link';
+
+  const avatarUrl = user ? `/static/profile_pics/${user.image_file}` : null;
 
   return (
     <header className="site-header">
       <div className="container header-inner">
         <Link to="/" className="brand">
-          Сайт о программировании
+          Шаблон авторизации
         </Link>
 
-        <nav className="nav-links">
+        <nav className="nav-links" aria-label="Навигация авторизации">
           <NavLink to="/" end className={navClass}>
-            Статьи
-          </NavLink>
-          <NavLink to="/art_manage" className={navClass}>
-            Управление
+            Главная
           </NavLink>
           {user ? (
             <>
               <NavLink to="/account" className={navClass}>
                 Аккаунт
               </NavLink>
+              <NavLink to="/protected" className={navClass}>
+                Защищённая страница
+              </NavLink>
+              {avatarUrl && (
+                <img
+                  className="header-avatar"
+                  src={avatarUrl}
+                  alt={`Аватар ${user.username}`}
+                  width={32}
+                  height={32}
+                />
+              )}
               <button type="button" className="nav-link as-button" onClick={onLogout}>
                 Выход
               </button>
@@ -60,15 +55,7 @@ export default function Header({
               </NavLink>
             </>
           )}
-          <NavLink to="/about" className={navClass}>
-            О сайте
-          </NavLink>
         </nav>
-
-        <div className="header-selects">
-          <ThemeSelect theme={theme} onChange={onThemeChange} />
-          <HljsThemeSelect theme={hljsTheme} onChange={onHljsThemeChange} />
-        </div>
       </div>
     </header>
   );

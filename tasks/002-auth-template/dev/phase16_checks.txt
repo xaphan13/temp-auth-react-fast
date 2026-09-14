@@ -1,0 +1,9 @@
+=== import/openapi checkpoint ===
+path_count= 23
+protected= True
+blog= False
+user_by_id= False
+users_me= True
+auth_routes= /auth/jwt/login /auth/jwt/logout /auth/register /auth/account /users/me /api/v1/auth/protected
+=== git diff --check ===
+=== changed paths ===

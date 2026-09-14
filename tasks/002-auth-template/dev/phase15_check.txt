@@ -1,0 +1,20 @@
+
+> frontend@0.0.1 build
+> tsc && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 42 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.59 kB │ gzip:  0.41 kB
+dist/assets/index-CQGcCi6A.css    8.27 kB │ gzip:  2.59 kB
+dist/assets/index-rrxOd0nF.js   180.60 kB │ gzip: 58.86 kB
+✓ built in 2.20s
+
+--- git diff --check ---
+
+--- forbidden markers: index.html + src ---
+
+--- duplicate Toast existence ---
+frontend/components/Toast.tsx absent

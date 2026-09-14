@@ -1,0 +1,6 @@
+# Фаза 06 — прогресс
+
+- 2026-09-14 — перед изменениями проверены runtime-импорты в `fastapi-application/auth_users` и всем Python product code: `markdown` и `itsdangerous` не импортируются; `config_log.py` импортирует `yaml` и вызывает `yaml.safe_load`, поэтому `pyyaml` сохраняется. Статус: проверка зависимостей PASS.
+- 2026-09-14 — `pyproject.toml`: удалены декларации `markdown` и `itsdangerous` вместе с blog/session-only комментарием; сохранены `pyyaml`, `fastapi-users[sqlalchemy]`, `python-multipart`, `pillow`, FastAPI и DB-зависимости. Manifest ruff PASS; полный backend ruff выявил только существующие несвязанные lint-ошибки, вывод в `phase06_ruff.txt`. Статус: manifest изменён.
+- 2026-09-14 — `uv.lock`: пересобран штатной командой `uv lock`; lock обновлён без `markdown`/`itsdangerous`, сохранены auth/avatar/runtime packages. Вывод команды: `phase06_lock.txt`. Статус: lock обновлён.
+- 2026-09-14 — финальный checkpoint: импорт приложения PASS (`10` маршрутов), `uv lock --check` PASS, dependency grep PASS (`markdown` отсутствует; `fastapi-users`, `python-multipart`, `pillow`, `pyyaml` присутствуют). Полный `uv run ruff check .` не PASS из-за 10 существующих несвязанных ошибок; raw output: `phase06_ruff.txt`. Статус: фаза готова.

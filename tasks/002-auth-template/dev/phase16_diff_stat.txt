@@ -1,0 +1,119 @@
+ docs/01_project_structure.md                       |   35 +-
+ docs/02_architecture.md                            |   61 +-
+ docs/03_execution_flow.md                          |   38 +-
+ fastapi-application/auth_users/router.py           |   26 +-
+ fastapi-application/content_art/.gitkeep           |    0
+ .../aion-zcode-1.md"                               | 1178 -------------
+ .../anion-gemini.md"                               |  387 -----
+ .../anion-gpt-1.md"                                |  326 ----
+ .../anion-gpt-2.md"                                |  223 ---
+ .../claude_stream_py.md"                           |  402 -----
+ .../deepseek-r1-fastapi-1.md"                      |  572 -------
+ .../first-arena-high5-fastapi-1.md"                | 1211 -------------
+ .../gem-deep-instal-windsurf-1.md"                 |  180 --
+ .../gpt5-deep-instal-windsurf-1.md"                |  184 --
+ .../gpt5-deep-instal-windsurf-2.md"                |  320 ----
+ .../Fast API/FastAPI_CodeReview.docx.md            |  277 ---
+ .../content_art/Fast API/agent_mode_review.md      |  259 ---
+ .../content_art/Fast API/gem-deep-windsurf-1.md    |  273 ---
+ .../content_art/Fast API/gemini-pro-fastapi-1.md   |  537 ------
+ .../content_art/Fast API/gigachat-fastapi-1.md     |  532 ------
+ .../content_art/Fast API/grok-eks-fastapi-1.md     |  706 --------
+ .../content_art/Guide FastAPI/gemPro-book1-g.md    |  402 -----
+ .../content_art/Guide FastAPI/gemPro-book1-s.md    |  509 ------
+ ...\203\321\200\320\260 FastAPI \320\270 React.md" |  513 ------
+ ...262 Python \320\264\320\273\321\217 FastAPI.md" |  327 ----
+ .../Guide MCP Python/python_advanced_book.md       |  504 ------
+ ...70\321\217 Puppeteer MCP \320\262 Qwen Code.md" |   54 -
+ ...5\320\275\321\202\320\276\320\262 Qwen Code.md" |   59 -
+ ...\320\265\321\200\320\265\320\267 uv run (1).md" |   71 -
+ ...\207\320\265\321\200\320\265\320\267 uv run.md" |   74 -
+ ...\321\200\320\276\320\262 \320\262 Qwen Code.md" |   75 -
+ .../Guide my fastApi/01-architecture-overview.md   |  139 --
+ .../Guide my fastApi/02-fastapi-backend.md         |  227 ---
+ .../Guide my fastApi/03-database-layer.md          |  193 ---
+ .../Guide my fastApi/04-json-api-contract.md       |  153 --
+ .../Guide my fastApi/05-react-frontend.md          |  207 ---
+ .../Guide my fastApi/06-integration-deploy.md      |  167 --
+ .../Guide my fastApi/07-alternatives.md            |  139 --
+ .../Guide my fastApi/08-checklist-new-project.md   |  156 --
+ .../content_art/Guide my fastApi/README.md         |   47 -
+ ...7\320\265\321\200\320\265\320\267 asyncssh_.md" |  197 ---
+ ...76\320\264\321\201\321\202\320\262\320\276_.md" |  185 --
+ .../Jinja Templates/gemini-pro-fastapi-1.md        |  535 ------
+ .../Jinja Templates/qwen3-coder-fastapi-1.md       | 1425 ----------------
+ .../qwen3-deep-instal-windsurf-1.md                |   92 -
+ .../content_art/Jinja Templates/sonet-fastapi-1.md | 1796 --------------------
+ .../Jinja Templates/sonet-instal-windsurf-1.md     |  280 ---
+ .../Jinja Templates/sonet-instal-windsurf-2.md     |  484 ------
+ .../content_art/Pydantic Python/gemPro-book1-g.md  |  402 -----
+ .../Pydantic Python/sonet-oauth2-simple-pr.md      |  336 ----
+ .../Pydantic Python/sonet-oauth2-super-promt.md    |  539 ------
+ .../Pydantic Python/sonet-oauth2_practice.md       |  160 --
+ .../content_art/Pydantic Python/test.md.md         |  273 ---
+ ...77\321\200\320\276\320\272\321\201\320\270_.md" |  233 ---
+ ...275\320\276\321\201\321\202\321\214 Python_.md" |  259 ---
+ ...260\320\275\320\270\320\265 WinSurf Python_.md" |  180 --
+ .../content_art/Python/01_project_structure.md     |   98 --
+ .../content_art/Python/02_architecture.md          |  223 ---
+ .../content_art/Python/03_execution_flow.md        |  167 --
+ .../content_art/Python/04_code_quality.md          |  100 --
+ .../content_art/Python/05_optimization_roadmap.md  |  343 ----
+ .../content_art/Python/06_frontend_guide.md        |  421 -----
+ .../Python/07_frontend_project_report.md           |  263 ---
+ .../content_art/Python/08_ai_application_report.md |  196 ---
+ .../content_art/Python/09_ai_code_examples.md      |  281 ---
+ .../content_art/Python/10_models_and_providers.md  |  263 ---
+ .../content_art/Rust/05_ai_agent_guide.md          |   48 -
+ .../Rust/06_frontend_bootstrap_analysis.md         |  182 --
+ .../content_art/Rust/06_frontend_report.md         |  261 ---
+ .../content_art/Rust/07_authorization_report.md    |  272 ---
+ .../content_art/Rust/configuration.md              |   87 -
+ .../report_database_sqlalchemy_async_alembic.md    |  556 ------
+ .../content_art/Rust/static-site-generation.md     |   32 -
+ .../content_art/Rust/writing-posts.md              |   64 -
+ .../Sql Alchemy/05_tailwind_cdn_vs_production.md   |  470 -----
+ .../content_art/Sql Alchemy/AGENTS.md              |  102 --
+ .../content_art/Sql Alchemy/QWEN.ru.md             |   66 -
+ .../content_art/Sql Alchemy/README.md              |   38 -
+ .../content_art/Sql Alchemy/REQUIREMENTS.ru.md     |  292 ----
+ .../content_art/Sql Alchemy/adversary.ru.md        |   69 -
+ .../content_art/Sql Alchemy/backend-dev.ru.md      |   58 -
+ .../Sql Alchemy/codex-onefast-review.md            |  175 --
+ .../content_art/Sql Alchemy/frontend-dev.ru.md     |   56 -
+ .../content_art/Sql Alchemy/orchestrator.ru.md     |   85 -
+ .../content_art/Sql Alchemy/qa.ru.md               |   70 -
+ fastapi-application/db_core/model_registry.py      |    3 +-
+ fastapi-application/main.py                        |   12 +-
+ fastapi-application/md_articles/__init__.py        |   13 -
+ fastapi-application/md_articles/api_blog.py        |  232 ---
+ fastapi-application/md_articles/articles.yaml      |  482 ------
+ fastapi-application/md_articles/models.py          |   64 -
+ fastapi-application/md_articles/schema_art.py      |  216 ---
+ fastapi-application/md_articles/schema_blog.py     |   34 -
+ fastapi-application/md_articles/setup_frontend.py  |  116 --
+ frontend/components/Toast.tsx                      |   97 --
+ frontend/index.html                                |  113 +-
+ frontend/src/App.tsx                               |   55 +-
+ frontend/src/api/artManage.ts                      |   44 -
+ frontend/src/api/blog.ts                           |   24 -
+ frontend/src/components/ArticleCard.tsx            |   23 -
+ frontend/src/components/Header.tsx                 |   51 +-
+ frontend/src/components/HljsThemeSelect.tsx        |   27 -
+ frontend/src/components/Layout.tsx                 |   31 +-
+ frontend/src/components/SectionMenu.tsx            |   55 -
+ frontend/src/components/SidePanel.tsx              |   71 -
+ frontend/src/components/ThemeSelect.tsx            |   32 -
+ frontend/src/context/AuthContext.tsx               |    2 +-
+ frontend/src/hooks/useHljsTheme.ts                 |   76 -
+ frontend/src/hooks/useTheme.ts                     |   48 -
+ frontend/src/index.css                             | 1237 ++------------
+ frontend/src/pages/AboutPage.tsx                   |   13 -
+ frontend/src/pages/AccountPage.tsx                 |   13 +-
+ frontend/src/pages/ArtManagePage.tsx               |  389 -----
+ frontend/src/pages/ArticlePage.tsx                 |   79 -
+ frontend/src/pages/HomePage.tsx                    |  115 +-
+ frontend/src/pages/RegisterPage.tsx                |   61 +-
+ frontend/src/types.ts                              |   36 +-
+ pyproject.toml                                     |    7 -
+ 118 files changed, 367 insertions(+), 27961 deletions(-)

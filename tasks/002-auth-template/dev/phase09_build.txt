@@ -1,0 +1,10 @@
+
+> frontend@0.0.1 build
+> tsc && vite build
+
+src/api/artManage.ts(7,15): error TS2305: Module '"../types"' has no exported member 'Article'.
+src/api/blog.ts(5,15): error TS2305: Module '"../types"' has no exported member 'Article'.
+src/api/blog.ts(5,24): error TS2305: Module '"../types"' has no exported member 'Section'.
+src/components/ArticleCard.tsx(5,15): error TS2305: Module '"../types"' has no exported member 'Article'.
+src/components/SectionMenu.tsx(13,15): error TS2305: Module '"../types"' has no exported member 'Section'.
+src/pages/ArticlePage.tsx(8,15): error TS2305: Module '"../types"' has no exported member 'Article'.

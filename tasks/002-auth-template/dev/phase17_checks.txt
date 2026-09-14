@@ -1,0 +1,18 @@
+CHECK: test ! -e docs/06_blog.md
+status=0
+CHECK: protected route references
+docs/04_authorization.md:15:| GET | `/api/v1/auth/protected` | `active_user` | проверка независимой backend-защиты; 401 для анонима |
+docs/04_authorization.md:43:  └── protected_router                   → /api/v1/auth/protected
+docs/04_authorization.md:72:`POST /auth/jwt/login` выдаёт JWT в cookie `auth`; тело успешного ответа не используется, поскольку статус — `204`. Браузер автоматически отправляет cookie на последующие same-origin запросы, поэтому `GET /users/me` и `GET /api/v1/auth/protected` получают текущего пользователя через `active_user`. `POST /auth/jwt/logout` возвращает `204` и очищает cookie в браузере.
+docs/04_authorization.md:92:`GET /api/v1/auth/protected` — независимая backend-проверка auth boundary. Маршрут использует dependency `active_user`: запрос без cookie получает JSON `401`, а авторизованный запрос получает `200` и JSON с `authenticated: true` и данными `UserRead`. Ответ не содержит пароль или `hashed_password`. UI guard защищает страницу `/protected`, но безопасность обеспечивается именно backend dependency.
+docs/04_authorization.md:98:- `App.tsx`: `RequireAuth` защищает `/account` и `/protected` на уровне UI; страница `/protected` вызывает `GET /api/v1/auth/protected`.
+docs/05_authorization_upgrade.md:14:- `GET /api/v1/auth/protected` проверяет backend boundary через `active_user` и возвращает JSON `401` для anonymous;
+docs/05_authorization_upgrade.md:48:../.venv/bin/python -c "from main import main_app; paths=main_app.openapi()['paths']; print('/api/v1/auth/protected' in paths); print('/users/me' in paths); print('/users/{id}' in paths)"
+docs/05_authorization_upgrade.md:50:curl -i http://127.0.0.1:8000/api/v1/auth/protected
+docs/05_authorization_upgrade.md:54:curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/api/v1/auth/protected
+docs/05_authorization_upgrade.md:59:Ожидания: `/users/me` и `/api/v1/auth/protected` без cookie возвращают JSON `401`; register — `201`; login/logout — `204`; авторизованные me/protected — `200`; account — `200` с `{message, category, user}`. Поле `image_file` строит avatar URL только через `/static/profile_pics/{image_file}`.
+status=0
+CHECK: no blog references in authorization docs
+status=0
+CHECK: git diff --check
+status=0

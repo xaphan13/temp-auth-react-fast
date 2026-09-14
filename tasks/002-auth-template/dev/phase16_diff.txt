@@ -1,0 +1,300 @@
+diff --git a/docs/01_project_structure.md b/docs/01_project_structure.md
+index 210548b..351cc37 100644
+--- a/docs/01_project_structure.md
++++ b/docs/01_project_structure.md
+@@ -1,25 +1,24 @@
+ # 01. Карта проекта
+ 
+-Проект — учебный модульный монолит на FastAPI 0.111+ / Python 3.12 с React 18 + TypeScript + Vite + Tailwind CSS v4. Бэкенд и собранный фронтенд обслуживаются одним ASGI-приложением; в dev фронтенд запускается отдельным Vite-сервером.
++Проект — учебный auth-only шаблон на FastAPI 0.111+ / Python 3.12 с React 18 + TypeScript + Vite + Tailwind CSS v4. Бэкенд и собранный фронтенд обслуживаются одним ASGI-приложением; в dev фронтенд запускается отдельным Vite-сервером.
+ 
+ ## Основные части
+ 
+ - `fastapi-application/api/` — демонстрации `Depends` и извлечения параметров.
+ - `fastapi-application/ex_order_product/` — демонстрационный домен заказов и товаров.
+ - `fastapi-application/db_core/` — SQLAlchemy 2.0 async, общая `Base`, сессии и типы колонок.
+-- `fastapi-application/auth_users/` — текущая авторизация на `fastapi-users`.
+-- `fastapi-application/md_articles/` — JSON API блога, YAML-реестр статей и серверный Markdown-рендер.
+-- `fastapi-application/content_art/` — Markdown-файлы статей.
++- `fastapi-application/auth_users/` — текущая авторизация на `fastapi-users`, аккаунт и avatar flow.
+ - `fastapi-application/static/profile_pics/` — аватары пользователей.
+-- `frontend/` — React-приложение и клиентские API-обёртки.
++- `fastapi-application/setup_frontend.py` — mounts для avatar static, frontend assets и SPA fallback.
++- `frontend/` — минимальное React-приложение auth-шаблона и клиентские API-обёртки.
+ - `fastapi-application/alembic/` — асинхронные миграции.
+ - `docs/` — актуальная техническая документация.
+ 
+ ## Точки сборки приложения
+ 
+-`fastapi-application/main.py` создаёт приложение через `create_app()`, подключает демонстрационный роутер, роутер заказов, затем авторизацию и блог через `include_router_api_frontend()`. Вызов `mount_vite_react_assets()` должен оставаться последним: он добавляет `/assets` и catch-all `/{full_path:path}`.
++`fastapi-application/main.py` создаёт приложение через `create_app()`, подключает демонстрационный роутер, роутер заказов и auth router, затем вызывает `mount_frontend()`. Этот вызов должен оставаться последним: он добавляет `/static`, `/assets` и catch-all `/{full_path:path}` после API-маршрутов.
+ 
+-`create_fastapi.py` отвечает только за каркас FastAPI и lifespan. Доменная композиция находится в `main.py`.
++`create_fastapi.py` отвечает только за каркас FastAPI и lifespan. Доменная композиция находится в `main.py`, а generic frontend-раздача — в корневом `setup_frontend.py`.
+ 
+ ## Дерево важных файлов
+ 
+@@ -27,6 +26,7 @@
+ fastapi-application/
+ ├── main.py
+ ├── create_fastapi.py
++├── setup_frontend.py
+ ├── core/config.py
+ ├── db_core/
+ │   ├── db_async.py
+@@ -43,14 +43,6 @@ fastapi-application/
+ │   ├── router.py
+ │   ├── account.py
+ │   └── helpers.py
+-├── md_articles/
+-│   ├── articles.yaml
+-│   ├── api_blog.py
+-│   ├── schema_art.py
+-│   ├── schema_blog.py
+-│   ├── models.py
+-│   └── setup_frontend.py
+-├── content_art/
+ ├── static/profile_pics/
+ └── alembic/versions/
+ 
+@@ -73,7 +65,7 @@ cd fastapi-application
+ ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"
+ ```
+ 
+-Ожидается **32 path-ключа OpenAPI** и **35 HTTP-операций**. `len(main_app.routes)` возвращает **11 верхнеуровневых объектов**: 4 включённых роутера, 5 служебных `Route` и 2 `Mount`. Эти значения нельзя смешивать: FastAPI хранит вложенные роутеры как отдельные объекты, а OpenAPI разворачивает их операции.
++Ожидается **23 path-ключа OpenAPI**. Полный контракт удобнее всего смотреть в `/openapi.json`.
+ 
+ Группы маршрутов:
+ 
+@@ -81,13 +73,12 @@ cd fastapi-application
+ |---|---|---|
+ | Depends и параметры | `/api/v1/...` | `api/` |
+ | Заказы | `/orders/...` | `ex_order_product/router_order_one.py` |
+-| Авторизация | `/auth/...`, `/users/...` | `auth_users/router.py` |
+-| Блог | `/api/blog/...` | `md_articles/api_blog.py` |
++| Авторизация | `/auth/...`, `/users/me` | `auth_users/router.py` |
++| Защищённая проверка доступа | `/api/v1/auth/protected` | `auth_users/router.py` |
+ | Swagger/OpenAPI | `/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect` | FastAPI |
+-| React | `/assets/*`, `/{full_path:path}` | `md_articles/setup_frontend.py` |
+-| Аватары | `/static/*` | `StaticFiles` |
++| React и статика | `/assets/*`, `/static/*`, `/{full_path:path}` | `setup_frontend.py` |
+ 
+-Полный контракт удобнее всего смотреть в `/openapi.json`, а подробности блога и авторизации вынесены в [06_blog.md](06_blog.md) и [04_authorization.md](04_authorization.md).
++Auth router публикует login/logout, registration, account update и операции текущего пользователя: `/auth/jwt/login`, `/auth/jwt/logout`, `/auth/register`, `/auth/account`, `GET/PATCH /users/me`. Маршрут `/api/v1/auth/protected` требует `active_user` и является независимой backend-границей доступа.
+ 
+ ## Конфигурация и база
+ 
+@@ -95,7 +86,7 @@ cd fastapi-application
+ 
+ SQLite-файл `./one_simple.db` разрешается относительно cwd процесса. Поэтому приложение предпочтительно запускать из `fastapi-application/`. Логи привязаны к `BASE_DIR` и не зависят от cwd.
+ 
+-Модели авторизации и демо-доменов должны быть импортированы до запуска Alembic, чтобы попасть в `Base.metadata`. Текущий `db_core/__init__.py` экспортирует только `Base`; миграция `alembic/versions/2026-09-13_22-34--caf2fea11a9d--initial.py` уже содержит таблицы `user`, `orders`, `products`, `order_product_association`, `blog_user` и `blog_post`.
++Модели авторизации и домена заказов должны быть импортированы до запуска Alembic, чтобы попасть в `Base.metadata`. Реестр моделей сохраняет auth User и order/product-модели.
+ 
+ ## Проверка фронтенда
+ 
+diff --git a/docs/02_architecture.md b/docs/02_architecture.md
+index fa75f4b..e0230d8 100644
+--- a/docs/02_architecture.md
++++ b/docs/02_architecture.md
+@@ -2,27 +2,27 @@
+ 
+ ## Общая схема
+ 
+-Проект — модульный монолит: один FastAPI-процесс обслуживает JSON API, аватары и собранный React-фронтенд.
++Проект — auth-only модульный монолит: один FastAPI-процесс обслуживает JSON API, avatar static и собранный React-фронтенд.
+ 
+ ```text
+ Браузер
+-  ├── React Router: /, /section/*, /art/*, /account, /art_manage
+-  ├── fetch /auth/* и /users/*
+-  └── fetch /api/blog/*
++  ├── React Router: /, /login, /register, /account, /protected
++  ├── fetch /auth/* и /users/me
++  └── fetch /api/v1/auth/protected
+           │
+           ▼
+ FastAPI main_app
+   ├── demo API /api/v1/*
+   ├── order API /orders/*
+-  ├── auth_users /auth/* и /users/*
+-  ├── blog API /api/blog/*
++  ├── auth_users /auth/* и /users/me
++  ├── protected API /api/v1/auth/protected
+   ├── /static/profile_pics/*
+   ├── /assets/*
+   └── catch-all → frontend/dist/index.html
+           │
+           ├── SQLite/PostgreSQL через db_core
+           ├── User через auth_users
+-          └── articles.yaml + content_art/*.md через md_articles
++          └── orders/products через ex_order_product
+ ```
+ 
+ ## Границы пакетов
+@@ -33,52 +33,53 @@ FastAPI main_app
+ | `db_core` | engine, async-сессии, `Base`, типы SQLAlchemy |
+ | `api` | учебные примеры FastAPI |
+ | `ex_order_product` | учебный SQLAlchemy-домен заказов |
+-| `auth_users` | User, пароль, cookie-JWT, зависимости доступа, аккаунт |
+-| `md_articles` | реестр и контент статей, блоговый API, подключение статики |
+-| `frontend` | UI, React Router, fetch-клиенты и локальное состояние |
++| `auth_users` | User, пароль, cookie-JWT, зависимости доступа, аккаунт и avatar flow |
++| `setup_frontend.py` | mounts для avatar static, frontend assets и generic SPA fallback |
++| `frontend` | auth UI, React Router, fetch-клиенты и локальное состояние |
+ | `main.py` | единственная точка композиции приложения |
+ 
+-Домены не должны импортировать друг друга без необходимости. `main.py` передаёт auth-роутер в `include_router_api_frontend()` явно, чтобы не создавать цикл импортов.
++Домены подключаются через `main.py`: он включает demo, order и auth routers, а затем передаёт приложение в `mount_frontend()`. Root-level frontend setup не содержит auth- или order-логики.
+ 
+-## Авторизация и блог разделены
++## Авторизация и защищённый endpoint
+ 
+-Авторизация больше не реализуется в `md_articles`: там нет `api_auth.py`, `middleware_auth.py`, `SessionMiddleware`, `request.state.current_user` или самописного CSRF. Пакет `auth_users` выдаёт JWT в HttpOnly-cookie, а блог использует dependency `active_user` только для операций управления реестром.
++Пакет `auth_users` выдаёт JWT в HttpOnly-cookie. Dependency `active_user` используется auth router и endpoint `GET /api/v1/auth/protected`; этот endpoint является независимой backend-границей и не полагается на client-side guard. Anonymous получает JSON 401, авторизованный пользователь — JSON с подтверждением доступа и данными пользователя.
+ 
+-Подробности:
++Auth router сохраняет следующие операции:
+ 
+-- [04_authorization.md](04_authorization.md) — модель User, fastapi-users, cookie/JWT и фронтенд-контракт.
+-- [06_blog.md](06_blog.md) — статьи, YAML-реестр, Markdown, API и React-страницы.
++- `/auth/jwt/login` и `/auth/jwt/logout`;
++- `/auth/register`;
++- `/auth/account`;
++- `GET/PATCH /users/me`.
++
++Стандартные маршруты управления пользователями по идентификатору не подключаются.
+ 
+ ## Хранилища данных
+ 
+-- **SQLAlchemy/БД:** пользователи `user`, демо-таблицы заказов и товаров, исторические `blog_user`/`blog_post`.
+-- **YAML:** `fastapi-application/md_articles/articles.yaml` — метаданные статей.
+-- **Файлы:** `fastapi-application/content_art/` — исходный Markdown; `static/profile_pics/` — аватары.
+-- **Браузер:** HttpOnly cookie `auth` для JWT и `localStorage` для тем сайта/подсветки.
++- **SQLAlchemy/БД:** пользователь `user`, демо-таблицы заказов и товаров.
++- **Файлы:** `static/profile_pics/` — аватары пользователей.
++- **Браузер:** HttpOnly cookie `auth` для JWT и состояние auth-контекста.
+ 
+-Статьи не хранятся в SQLAlchemy. Реестр читается с mtime-кэшем, а запись выполняется через временный файл и `os.replace`.
++Путь аватара в БД хранится как имя файла; URL `/static/profile_pics/<имя>` формируется клиентом.
+ 
+ ## Поток запроса
+ 
+ 1. Uvicorn передаёт запрос FastAPI.
+-2. Роутинг выбирает вложенный роутер; catch-all находится последним.
++2. Роутинг выбирает вложенный API-роутер; catch-all находится последним.
+ 3. FastAPI разрешает dependency и открывает `CurrentSession`, если она нужна.
+ 4. Для защищённого маршрута `active_user` читает JWT из cookie и загружает `User` через `SQLAlchemyUserDatabase`.
+-5. Обработчик читает БД или файловый реестр.
+-6. Ответ сериализуется FastAPI; JSON API возвращает данные для React.
++5. Обработчик читает или изменяет БД.
++6. Ответ сериализуется FastAPI; JSON API возвращает данные для auth-клиента.
+ 
+-В отличие от прежней документации, отдельной middleware-сессии с `user_id` нет. JWT самодостаточен для аутентификации, но dependency всё равно обращается к БД за актуальным пользователем и проверяет `is_active`.
++JWT самодостаточен для аутентификации, но dependency обращается к БД за актуальным пользователем и проверяет `is_active`.
+ 
+ ## Frontend dev и production
+ 
+-В dev Vite работает на `:5173` и проксирует `/api` и `/static` на `http://localhost:8000`. Пути `/auth` и `/users` в `vite.config.ts` явно не проксируются; для auth-флоу удобнее same-origin production-сборка или настройка прокси перед использованием отдельного Vite-origin.
+-
+-В production FastAPI раздаёт `frontend/dist/assets` и возвращает `index.html` для history-mode маршрутов React. Для неизвестных `/api/*` catch-all отдаёт JSON 404, а не HTML.
++В dev Vite работает на `:5173` и проксирует API-запросы на FastAPI. В production `mount_frontend()` раздаёт `frontend/dist/assets` и возвращает `index.html` для history-mode маршрутов React. Для неизвестных `/api/*` catch-all отдаёт JSON 404, а не HTML.
+ 
+ ## Архитектурные инварианты
+ 
+-1. `mount_vite_react_assets(main_app)` вызывается после всех `include_router`.
++1. `mount_frontend(main_app)` вызывается после всех `include_router`.
+ 2. `frontend/dist` не коммитится.
+ 3. Путь аватара в БД хранится как имя файла; URL `/static/profile_pics/<имя>` собирает фронтенд.
+ 4. Секрет `settings.web.secret_key` используется JWT-стратегией и токенами fastapi-users.
+-5. Реестр статей изменяется только через функции `schema_art.py`, а не прямой записью из роутера.
++5. `/api/v1/auth/protected` остаётся защищённым `active_user` независимо от состояния UI.
+diff --git a/docs/03_execution_flow.md b/docs/03_execution_flow.md
+index 0c19fdd..03508de 100644
+--- a/docs/03_execution_flow.md
++++ b/docs/03_execution_flow.md
+@@ -12,12 +12,10 @@
+ 
+ 1. Загружаются `BASE_DIR`, логирование и `Settings`.
+ 2. Создаётся `AsyncEngine` и менеджер async-сессий.
+-3. Импортируются роутеры демонстраций, заказов, `auth_users` и `md_articles`.
++3. Импортируются роутеры демонстраций, заказов и `auth_users`.
+ 4. `create_app()` создаёт FastAPI с lifespan.
+-5. `main.py` подключает роутеры.
+-6. `mount_vite_react_assets()` добавляет `/assets` и последний catch-all.
+-
+-`articles.yaml` не читается на импорте: реестр загружается лениво при первом обращении к `get_articles()`.
++5. `main.py` подключает demo, order и auth routers.
++6. `mount_frontend()` добавляет `/static`, `/assets` и последний catch-all.
+ 
+ ## Lifespan
+ 
+@@ -30,24 +28,23 @@
+ ```text
+ router_api
+ r_order_one
+-auth_users.router + /static + router_blog_api
+-/assets
+-/{full_path:path}
++auth_users.router
++/static + /assets + /{full_path:path} через setup_frontend.py
+ ```
+ 
+-Catch-all добавляется вручную через `app.router.routes.append(Route(...))`. Это важно: он не должен перехватывать API и должен отдавать React `index.html` только для клиентских маршрутов.
++Catch-all добавляется последним. Для путей `/api` и `/api/*` он возвращает JSON 404, а для обычных browser-путей — `frontend/dist/index.html`, если сборка существует.
+ 
+ ## Авторизованный запрос
+ 
+-Для `GET /users/me`, `POST /auth/account` или защищённого `/api/blog/art_manage`:
++Для `GET /users/me`, `POST /auth/account` или `GET /api/v1/auth/protected`:
+ 
+ 1. Клиент отправляет cookie `auth` с JWT (`credentials: 'include'`).
+-2. dependency `active_user` извлекает и проверяет JWT.
++2. Dependency `active_user` извлекает и проверяет JWT.
+ 3. `get_user_manager()` получает `SQLAlchemyUserDatabase` поверх `CurrentSession`.
+ 4. Пользователь загружается из таблицы `user`; невалидный/просроченный токен даёт 401.
+ 5. Обработчик выполняет чтение или изменение.
+ 
+-Для публичного `GET /api/blog/articles` шаг авторизации отсутствует.
++`GET /api/v1/auth/protected` возвращает JSON с подтверждением доступа и auth-данными пользователя. Отсутствие cookie даёт JSON 401 независимо от client-side `RequireAuth`.
+ 
+ ## Вход и регистрация
+ 
+@@ -83,18 +80,6 @@ username=<email>&password=<пароль>
+ 
+ Пароль не возвращается. В БД хранится только имя файла, не полный URL.
+ 
+-## Блоговый запрос
+-
+-`GET /api/blog/articles/{art_id}`:
+-
+-1. `get_art()` читает реестр с mtime-кэшем.
+-2. Проверяется полнота метаданных и наличие файла в `content_art/`.
+-3. `render_article()` читает Markdown и применяет `fenced_code` и `tables`.
+-4. Ответ содержит готовый HTML в поле `article.content`.
+-5. `MarkdownContent` вставляет этот HTML и запускает highlight.js.
+-
+-При повреждённом YAML предыдущий рабочий кэш сохраняется, а ошибка доступна в `yaml_error` ответа управления реестром.
+-
+ ## Ошибки
+ 
+ | Ситуация | Ответ |
+@@ -104,7 +89,6 @@ username=<email>&password=<пароль>
+ | Дубликат email при регистрации | 400 `REGISTER_USER_ALREADY_EXISTS` |
+ | Пароль короче 8 символов | 400 `REGISTER_INVALID_PASSWORD` |
+ | Невалидный JSON/form | 422 FastAPI/fastapi-users |
+-| Неизвестная статья или отсутствующий файл | 404 |
+ | Неизвестный `/api/*` путь | JSON 404 от catch-all |
+ | Нет frontend/dist для обычного browser-пути | JSON 404 с подсказкой `npm run build` |
+ 
+@@ -113,8 +97,8 @@ username=<email>&password=<пароль>
+ ```bash
+ cd fastapi-application
+ ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"
+-# 32
++# 23
+ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/docs
+-curl -s http://127.0.0.1:8000/api/blog/articles
+ curl -s http://127.0.0.1:8000/users/me
++curl -s http://127.0.0.1:8000/api/v1/auth/protected
+ ```

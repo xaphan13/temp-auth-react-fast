@@ -1,0 +1,33 @@
+=== forbidden runtime names in target docs ===
+pattern=blog
+no matches
+pattern=md_articles
+no matches
+pattern=ex_user_post
+no matches
+pattern=content_art
+no matches
+=== auth route descriptions ===
+docs/03_execution_flow.md:39:Для `GET /users/me`, `POST /auth/account` или `GET /api/v1/auth/protected`:
+docs/03_execution_flow.md:47:`GET /api/v1/auth/protected` возвращает JSON с подтверждением доступа и auth-данными пользователя. Отсутствие cookie даёт JSON 401 независимо от client-side `RequireAuth`.
+docs/03_execution_flow.md:53:`POST /auth/register` принимает JSON `{email, password}`. `fastapi-users` проверяет email и уникальность, `UserManager.validate_password()` требует минимум 8 символов, пароль хешируется библиотекой. После создания `on_after_register()` заполняет `username` из части email до `@` и задаёт `default.jpg`.
+docs/03_execution_flow.md:59:`POST /auth/jwt/login` принимает `application/x-www-form-urlencoded`:
+docs/03_execution_flow.md:65:Успех — 204 и `Set-Cookie: auth=...`. React после 204 вызывает `GET /users/me`, чтобы получить профиль.
+docs/03_execution_flow.md:69:`POST /auth/jwt/logout` очищает cookie. Клиент не зависит от тела ответа и сбрасывает пользователя в `AuthContext`.
+docs/03_execution_flow.md:73:`POST /auth/account` принимает multipart-поля `username`, `email`, необязательный `picture`.
+docs/03_execution_flow.md:102:curl -s http://127.0.0.1:8000/users/me
+docs/03_execution_flow.md:103:curl -s http://127.0.0.1:8000/api/v1/auth/protected
+docs/02_architecture.md:9:  ├── React Router: /, /login, /register, /account, /protected
+docs/02_architecture.md:10:  ├── fetch /auth/* и /users/me
+docs/02_architecture.md:11:  └── fetch /api/v1/auth/protected
+docs/02_architecture.md:17:  ├── auth_users /auth/* и /users/me
+docs/02_architecture.md:18:  ├── protected API /api/v1/auth/protected
+docs/02_architecture.md:45:Пакет `auth_users` выдаёт JWT в HttpOnly-cookie. Dependency `active_user` используется auth router и endpoint `GET /api/v1/auth/protected`; этот endpoint является независимой backend-границей и не полагается на client-side guard. Anonymous получает JSON 401, авторизованный пользователь — JSON с подтверждением доступа и данными пользователя.
+docs/02_architecture.md:49:- `/auth/jwt/login` и `/auth/jwt/logout`;
+docs/02_architecture.md:50:- `/auth/register`;
+docs/02_architecture.md:51:- `/auth/account`;
+docs/02_architecture.md:52:- `GET/PATCH /users/me`.
+docs/02_architecture.md:85:5. `/api/v1/auth/protected` остаётся защищённым `active_user` независимо от состояния UI.
+docs/01_project_structure.md:76:| Авторизация | `/auth/...`, `/users/me` | `auth_users/router.py` |
+docs/01_project_structure.md:77:| Защищённая проверка доступа | `/api/v1/auth/protected` | `auth_users/router.py` |
+docs/01_project_structure.md:81:Auth router публикует login/logout, registration, account update и операции текущего пользователя: `/auth/jwt/login`, `/auth/jwt/logout`, `/auth/register`, `/auth/account`, `GET/PATCH /users/me`. Маршрут `/api/v1/auth/protected` требует `active_user` и является независимой backend-границей доступа.

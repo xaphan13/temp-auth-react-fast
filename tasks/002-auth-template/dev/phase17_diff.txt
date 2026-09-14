@@ -1,0 +1,268 @@
+diff --git a/docs/04_authorization.md b/docs/04_authorization.md
+index d3e444d..247ea87 100644
+--- a/docs/04_authorization.md
++++ b/docs/04_authorization.md
+@@ -1,6 +1,6 @@
+ # 04. Авторизация
+ 
+-Текущая авторизация находится в `fastapi-application/auth_users/` и построена на `fastapi-users` с SQLAlchemy-адаптером, `CookieTransport` и `JWTStrategy`. Это отдельный слой приложения; блог не содержит собственного login/session/CSRF-кода.
++Текущая авторизация находится в `fastapi-application/auth_users/` и построена на `fastapi-users` с SQLAlchemy-адаптером, `CookieTransport` и `JWTStrategy`. Это самостоятельный auth-only слой приложения: он обслуживает регистрацию, вход, cookie-сессию, профиль пользователя и защищённую проверочную точку API.
+ 
+ ## Контракт маршрутов
+ 
+@@ -9,14 +9,12 @@
+ | POST | `/auth/jwt/login` | публичный | form-urlencoded `username=<email>&password=...`; 204 + cookie |
+ | POST | `/auth/jwt/logout` | публичный | очистить cookie; 204 |
+ | POST | `/auth/register` | публичный | JSON `{email,password}`; 201 |
+-| GET | `/users/me` | `active_user` | текущий пользователь |
+-| PATCH | `/users/me` | `active_user` | email/password через fastapi-users |
+-| GET | `/users/{id}` | `superuser_user` | прочитать пользователя |
+-| PATCH | `/users/{id}` | `superuser_user` | изменить пользователя |
+-| DELETE | `/users/{id}` | `superuser_user` | удалить пользователя |
++| GET | `/users/me` | `active_user` | текущий пользователь; 401 для анонима |
++| PATCH | `/users/me` | `active_user` | стандартное обновление собственного профиля fastapi-users |
+ | POST | `/auth/account` | `active_user` | username/email/аватар, multipart |
++| GET | `/api/v1/auth/protected` | `active_user` | проверка независимой backend-защиты; 401 для анонима |
+ 
+-Последние три маршрута зарегистрированы библиотекой, но текущий React-клиент их не вызывает. Защищённые маршруты возвращают 401 для анонимного запроса.
++Users-router ограничен маршрутами `/users/me` (GET/PATCH). Стандартные маршруты управления другими пользователями (`/users/{id}`) в auth-only шаблон не подключены.
+ 
+ ## Модель User
+ 
+@@ -40,8 +38,9 @@
+ auth_users/router.py
+   ├── get_auth_router(auth_backend)      → /auth/jwt/login, /auth/jwt/logout
+   ├── get_register_router(...)           → /auth/register
+-  ├── get_users_router(...)              → /users/me, /users/{id}
+-  └── account.router                     → /auth/account
++  ├── get_users_router(...)              → только /users/me (GET/PATCH)
++  ├── account.router                     → /auth/account
++  └── protected_router                   → /api/v1/auth/protected
+ ```
+ 
+ `fastapi_users_obj.py` создаёт:
+@@ -70,7 +69,9 @@ auth_users/router.py
+ 
+ JWT подписывается `settings.web.secret_key`. Тот же секрет передан менеджеру для токенов verification/reset, хотя соответствующие маршруты сейчас не подключены.
+ 
+-`frontend/src/api/client.ts` всегда использует `credentials: 'include'`. В `localStorage` токен не сохраняется. Отдельного CSRF-токена нет: текущий контракт рассчитан на same-origin cookie, `HttpOnly` и `SameSite=Lax`. При выносе API на другой origin нужно отдельно пересмотреть CORS, cookie-политику и CSRF-модель.
++`POST /auth/jwt/login` выдаёт JWT в cookie `auth`; тело успешного ответа не используется, поскольку статус — `204`. Браузер автоматически отправляет cookie на последующие same-origin запросы, поэтому `GET /users/me` и `GET /api/v1/auth/protected` получают текущего пользователя через `active_user`. `POST /auth/jwt/logout` возвращает `204` и очищает cookie в браузере.
++
++`frontend/src/api/client.ts` всегда использует `credentials: 'include'`. JWT не сохраняется в `localStorage`, а cookie имеет `HttpOnly`, поэтому JavaScript не читает её напрямую. Отдельного CSRF-токена нет: текущий контракт рассчитан на same-origin cookie с `SameSite=Lax`. При выносе API на другой origin нужно отдельно пересмотреть CORS, cookie-политику и CSRF-модель.
+ 
+ ## Account и аватар
+ 
+@@ -82,20 +83,25 @@ email: str
+ picture: UploadFile | отсутствует
+ ```
+ 
+-`auth_users/helpers.py` проверяет email и уникальность, а `save_picture()` сохраняет изображение после resize 125×125. Имя файла генерируется случайно и сохраняется в `User.image_file`. React строит URL как `/static/profile_pics/${image_file}`.
++`auth_users/helpers.py` проверяет email и уникальность, а `save_picture()` сохраняет изображение после resize 125×125. Имя файла генерируется случайно и сохраняется в `User.image_file`. React строит URL как `/static/profile_pics/${image_file}`; backend раздаёт этот каталог через mount `/static`, поэтому avatar URL не попадает в SPA fallback.
++
++Успешный ответ account endpoint имеет форму `{message, category, user}`. Для обычного изменения email/password можно использовать стандартный `PATCH /users/me`; multipart account endpoint предназначен для username, email и optional `picture`.
++
++## Protected API
++
++`GET /api/v1/auth/protected` — независимая backend-проверка auth boundary. Маршрут использует dependency `active_user`: запрос без cookie получает JSON `401`, а авторизованный запрос получает `200` и JSON с `authenticated: true` и данными `UserRead`. Ответ не содержит пароль или `hashed_password`. UI guard защищает страницу `/protected`, но безопасность обеспечивается именно backend dependency.
+ 
+ ## React-контракт
+ 
+ - `api/auth.ts`: login → form-urlencoded и последующий `/users/me`; logout → `/auth/jwt/logout`; register → `/auth/register`; account → `/auth/account`.
+ - `AuthContext.tsx`: при старте вызывает `/users/me`; 401 означает `user = null`.
+-- `App.tsx`: `RequireAuth` защищает `/account` и `/art_manage` на уровне UI.
++- `App.tsx`: `RequireAuth` защищает `/account` и `/protected` на уровне UI; страница `/protected` вызывает `GET /api/v1/auth/protected`.
++- Регистрация отправляет только `{email, password}`. `username` вычисляется auth manager после создания пользователя.
+ - API всё равно проверяет dependency `active_user`; UI-защита не является механизмом безопасности.
+ 
+ ## Схема базы и миграции
+ 
+-Таблица текущей авторизации — `user`, с UUID и полями fastapi-users. Исторические `blog_user` и `blog_post` остаются отдельными таблицами миграции и не участвуют в текущем auth-контракте.
+-
+-Миграция находится в `fastapi-application/alembic/versions/2026-09-13_22-34--caf2fea11a9d--initial.py`. Alembic берёт `Base.metadata` из приложения; перед генерацией миграции должны импортироваться модели `auth_users`.
++Таблица текущей авторизации — `user`, с UUID и полями fastapi-users. Alembic берёт `Base.metadata` из приложения; перед генерацией миграции должны импортироваться модели `auth_users`.
+ 
+ ## Важные ограничения
+ 
+diff --git a/docs/05_authorization_upgrade.md b/docs/05_authorization_upgrade.md
+index 9c0b504..d40de8d 100644
+--- a/docs/05_authorization_upgrade.md
++++ b/docs/05_authorization_upgrade.md
+@@ -1,16 +1,18 @@
+ # 05. Авторизация: дальнейшее развитие
+ 
+-Этот документ больше не описывает миграцию на `fastapi-users`: миграция уже выполнена. Текущее состояние и фактический контракт находятся в [04_authorization.md](04_authorization.md).
++Этот документ описывает следующие шаги для auth-only шаблона. Фактическое состояние и контракты маршрутов находятся в [04_authorization.md](04_authorization.md).
+ 
+ ## Что уже сделано
+ 
+ - auth-слой вынесен в `fastapi-application/auth_users/`;
+ - `User` использует UUID и стандартные поля fastapi-users;
+ - пароль проверяется через `UserManager`, минимум — 8 символов;
+-- вход/выход работают через JWT в cookie `auth`;
+-- `/auth/account` поддерживает username, email и аватар;
+-- блог защищает операции управления dependency `active_user`;
+-- фронтенд использует `/auth/*` и `/users/*`, без самописной CSRF-сессии.
++- вход/выход работают через JWT в HttpOnly cookie `auth`;
++- `/auth/account` поддерживает username, email и optional avatar upload;
++- avatar static сохраняется через `/static/profile_pics/`;
++- users-router ограничен `/users/me` (GET/PATCH), без маршрутов `/users/{id}`;
++- `GET /api/v1/auth/protected` проверяет backend boundary через `active_user` и возвращает JSON `401` для anonymous;
++- фронтенд использует `/auth/*` и `/users/*`, cookie credentials и защищённые routes `/account` и `/protected`.
+ 
+ ## Следующие варианты
+ 
+@@ -29,9 +31,9 @@
+ 
+ `UserManager` уже содержит секреты `verification_token_secret` и `reset_password_token_secret`, но роутеры этих потоков не подключены. Для реализации нужны email-доставка, UI-состояния и явный контракт сроков жизни токенов. Это отдельная фича, а не продолжение миграции.
+ 
+-### 3. Роли редакторов
++### 3. Управление пользователями и роли
+ 
+-Сейчас `active_user` защищает `/api/blog/art_manage*`, поэтому любой активный пользователь может менять `articles.yaml`. Если нужен редакторский доступ, следует использовать `superuser_user` или добавить отдельное поле/permission-модель и зафиксировать её в API-контракте.
++В auth-only шаблоне стандартные маршруты управления пользователями `/users/{id}` не подключены. Если понадобится административное управление, следует отдельно зафиксировать API-контракт и использовать `superuser_user` либо permission-модель; не следует открывать эти маршруты для обычного `active_user`.
+ 
+ ### 4. Сессии и отзыв токенов
+ 
+@@ -39,14 +41,21 @@ JWT — stateless-токен: logout очищает cookie браузера, н
+ 
+ ### 5. Проверки
+ 
+-После изменений авторизации проверить:
++После изменений авторизации проверить anonymous boundary и cookie-flow:
+ 
+ ```bash
+ cd fastapi-application
+-../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"
++../.venv/bin/python -c "from main import main_app; paths=main_app.openapi()['paths']; print('/api/v1/auth/protected' in paths); print('/users/me' in paths); print('/users/{id}' in paths)"
++curl -i http://127.0.0.1:8000/users/me
++curl -i http://127.0.0.1:8000/api/v1/auth/protected
+ curl -i -c /tmp/auth.cookies -X POST http://127.0.0.1:8000/auth/register -H 'Content-Type: application/json' -d '{"email":"user@example.com","password":"password123"}'
+ curl -i -c /tmp/auth.cookies -b /tmp/auth.cookies -X POST http://127.0.0.1:8000/auth/jwt/login -H 'Content-Type: application/x-www-form-urlencoded' --data 'username=user@example.com&password=password123'
+ curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/users/me
++curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/api/v1/auth/protected
++curl -i -b /tmp/auth.cookies -X POST http://127.0.0.1:8000/auth/account -F 'username=authuser' -F 'email=user@example.com'
++curl -i -b /tmp/auth.cookies -X POST http://127.0.0.1:8000/auth/jwt/logout
+ ```
+ 
++Ожидания: `/users/me` и `/api/v1/auth/protected` без cookie возвращают JSON `401`; register — `201`; login/logout — `204`; авторизованные me/protected — `200`; account — `200` с `{message, category, user}`. Поле `image_file` строит avatar URL только через `/static/profile_pics/{image_file}`.
++
+ Не фиксируйте в документации старые значения счётчика маршрутов: актуальный источник — `/openapi.json` и код `main.py`.
+diff --git a/docs/06_blog.md b/docs/06_blog.md
+deleted file mode 100644
+index b602354..0000000
+--- a/docs/06_blog.md
++++ /dev/null
+@@ -1,113 +0,0 @@
+-# 06. Блог
+-
+-Блог состоит из файлового контента `content_art/`, YAML-реестра `md_articles/articles.yaml`, JSON API FastAPI и React-интерфейса. SQLAlchemy используется для пользователей авторизации, но статьи в БД не хранятся.
+-
+-## Состав
+-
+-| Компонент | Файл | Назначение |
+-|---|---|---|
+-| API статей | `md_articles/api_blog.py` | sections, articles, detail |
+-| Управление реестром | `md_articles/api_blog.py` | add_all, meta, sync |
+-| Реестр и рендер | `md_articles/schema_art.py` | YAML, mtime-кэш, Markdown |
+-| Схемы API | `md_articles/schema_blog.py` | `MetaIn`, `SectionOut` |
+-| Подключение | `md_articles/setup_frontend.py` | `/static`, `/assets`, catch-all |
+-| Контент | `content_art/` | `.md` и `.markdown` |
+-| Клиент статей | `frontend/src/api/blog.ts` | GET-обёртки |
+-| Управление | `frontend/src/api/artManage.ts` | защищённые POST/GET |
+-
+-## Хранение статей
+-
+-`content_art/` содержит Markdown-файлы. Первая папка в относительном пути — `section`:
+-
+-```text
+-content_art/
+-├── Python/article.md       → section = Python
+-├── Fast API/intro.md       → section = Fast API
+-└── article-root.md         → section = ""
+-```
+-
+-`articles.yaml` содержит список записей:
+-
+-```yaml
+-articles:
+-  - author: Автор
+-    lang: Python
+-    art_id: 123
+-    title: Заголовок
+-    file_name: Python/article.md
+-    section: Python
+-```
+-
+-`section` автоматически вычисляется из `file_name`, если не задан. Поля `content` в YAML нет: HTML строится только при запросе конкретной статьи.
+-
+-## Кэш и запись реестра
+-
+-`get_articles()` сравнивает `st_mtime_ns` и размер файла. Если YAML не менялся, используется кэш процесса. При ошибке разбора предыдущий рабочий список сохраняется, а причина доступна через `get_registry_error()`.
+-
+-`save_articles()` пишет YAML во временный файл в той же папке и заменяет исходный через `os.replace`. После записи mtime-кэш инвалидируется.
+-
+-## API
+-
+-### Публичные маршруты
+-
+-| Метод | URL | Ответ |
+-|---|---|---|
+-| GET | `/api/blog/sections` | `{sections: [{name,label,count}]}` |
+-| GET | `/api/blog/articles` | `{articles: [...]}`; optional `?section=` |
+-| GET | `/api/blog/articles/{art_id}` | `{article: {..., content: "<html>"}}` |
+-
+-Список отдаёт только записи с непустыми `author`, `lang` и `title`. Detail дополнительно требует существующий файл на диске; иначе 404.
+-
+-### Управление реестром
+-
+-Все маршруты требуют `Depends(active_user)` из `auth_users`:
+-
+-| Метод | URL | Назначение |
+-|---|---|---|
+-| GET | `/api/blog/art_manage` | реестр, новые файлы, missing entries, yaml_error |
+-| POST | `/api/blog/art_manage/add_all` | добавить все незарегистрированные Markdown-файлы |
+-| POST | `/api/blog/art_manage/meta` | добавить/обновить метаданные одного файла |
+-| POST | `/api/blog/art_manage/sync` | удалить записи без файла |
+-
+-`add_all` создаёт дефолты `author=NoName`, `title=stem`, `lang=section` и уникальный timestamp-based `art_id`. `meta` сохраняет существующий `section` при обновлении. `sync` удаляет только сиротские записи.
+-
+-Анонимный запрос к управлению получает 401. Отдельного блогового login API, Starlette-сессии и CSRF-протокола нет — авторизация документирована в [04_authorization.md](04_authorization.md).
+-
+-## Рендер Markdown
+-
+-`render_article()` читает файл из `content_art/`. Для `.md` и `.markdown` используется `markdown()` с extensions `fenced_code` и `tables`; другие расширения возвращаются как текст.
+-
+-Бэкенд отдаёт готовый HTML. `frontend/src/components/MarkdownContent.tsx` вставляет его в единственном разрешённом в проекте месте через `dangerouslySetInnerHTML`, затем запускает глобальный highlight.js. Клиент регистрирует алиасы `env`, `jinja2`, `vue`, `txt`, `js`, `jsx`, `make`, `Dockerfile`, `toml`.
+-
+-Контент считается доверенным локальным контентом проекта. Если статьи начнут редактировать внешние пользователи, перед вставкой нужен отдельный HTML-sanitizer.
+-
+-## React-маршруты
+-
+-`frontend/src/App.tsx` объявляет:
+-
+-- `/` — статьи и пагинация;
+-- `/section/:name` — фильтр раздела;
+-- `/art/:author/:artId` — статья;
+-- `/about` — информация о сайте;
+-- `/login`, `/register` — auth-формы;
+-- `/account` — аккаунт, защищённый `RequireAuth`;
+-- `/art_manage` — управление реестром, защищённое `RequireAuth`.
+-
+-`AuthContext` получает пользователя из `/users/me`; блоговые GET-маршруты не требуют входа. `Header` показывает ссылку управления даже анониму, но API и `RequireAuth` не дают выполнить защищённое действие.
+-
+-## Управление реестром во фронтенде
+-
+-`ArtManagePage` загружает полный контекст, фильтрует записи по title/file_name и признакам «без автора»/«без языка», редактирует выбранную запись через `ArtManageForms`, добавляет новые файлы и очищает отсутствующие. После каждой мутации выполняется повторная загрузка.
+-
+-## Подключение React
+-
+-`include_router_api_frontend()` монтирует `/static`, auth-роутер и `router_blog_api`. `mount_vite_react_assets()` монтирует `/assets`, затем вручную добавляет catch-all. Для `/api` catch-all возвращает JSON 404; для обычных путей — `frontend/dist/index.html`.
+-
+-## Добавление статьи
+-
+-1. Создать `.md` в `fastapi-application/content_art/<section>/`.
+-2. Открыть `/art_manage` под активным пользователем.
+-3. Нажать добавление новых файлов или заполнить метаданные.
+-4. Проверить `/api/blog/articles` и открыть страницу статьи.
+-
+-Если файл удалён вручную, `art_manage` покажет `missing_entries`; `sync` удалит запись из YAML.

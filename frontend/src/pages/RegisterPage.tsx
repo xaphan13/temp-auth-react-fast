@@ -1,28 +1,22 @@
-// Страница регистрации: форма (username, email, password, confirm_password)
-// с клиентской валидацией. POST /api/blog/register; при 422 показываем
-// errors по полям; при успехе — toast + редирект на /login.
+// Страница регистрации: форма (email, password, confirm_password)
+// с клиентской валидацией. POST /auth/register; server validation показываем
+// по полям и в общем блоке; при успехе — toast + редирект на /login.
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { register, extractErrors } from '../api/auth';
+import { ApiError } from '../api/client';
 import { useToast } from '../components/Toast';
 
 interface FormState {
-  username: string;
   email: string;
   password: string;
   confirm_password: string;
 }
 
-// Клиентская валидация: зеркалирует серверную в api_blog.py
-// (те же правила длины и email).
+// Клиентская валидация полей, которые отправляются на /auth/register.
 export function validate(form: FormState): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
-  if (!form.username.trim()) {
-    errors.username = ['This field is required.'];
-  } else if (form.username.trim().length > 100) {
-    errors.username = ['Field must be 100 characters or less.'];
-  }
   if (!form.email.trim()) {
     errors.email = ['This field is required.'];
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
@@ -41,11 +35,35 @@ export function validate(form: FormState): Record<string, string[]> {
   return errors;
 }
 
+function getServerValidationErrors(err: unknown): Record<string, string[]> {
+  const errors = extractErrors(err);
+  if (!(err instanceof ApiError)) return errors;
+
+  const data = err.data as
+    | { detail?: string | Array<{ loc?: unknown[]; msg?: string }> }
+    | null;
+  if (Array.isArray(data?.detail)) {
+    for (const item of data.detail) {
+      const field = item.loc?.find(
+        (part): part is string => part === 'email' || part === 'password',
+      );
+      const message = item.msg || 'Invalid value.';
+      if (field) {
+        errors[field] = [...(errors[field] || []), message];
+      } else {
+        errors.form = [...(errors.form || []), message];
+      }
+    }
+  } else if (typeof data?.detail === 'string' && Object.keys(errors).length === 0) {
+    errors.form = [data.detail];
+  }
+  return errors;
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [form, setForm] = useState<FormState>({
-    username: '',
     email: '',
     password: '',
     confirm_password: '',
@@ -73,17 +91,15 @@ export default function RegisterPage() {
     }
     setSubmitting(true);
     try {
-      // fastapi-users /auth/register: только email + password, возвращает User (201).
-      // Поля username/confirm_password из формы в новом контракте не используются.
+      // fastapi-users /auth/register получает только email и password.
       await register({ email: form.email, password: form.password });
       showToast('Регистрация выполнена', 'success');
       navigate('/login');
     } catch (err) {
-      const serverErrors = extractErrors(err);
+      const serverErrors = getServerValidationErrors(err);
       if (Object.keys(serverErrors).length > 0) {
         setErrors(serverErrors);
       } else {
-        // Прочие ошибки (400 уже авторизован, сеть) — тостом.
         const detail =
           err instanceof Error ? err.message : 'Не удалось зарегистрироваться';
         showToast(detail, 'danger');
@@ -97,14 +113,6 @@ export default function RegisterPage() {
     <div className="auth-page">
       <h1>Регистрация</h1>
       <form onSubmit={handleSubmit} noValidate>
-        <FormField
-          label="Имя пользователя"
-          name="username"
-          type="text"
-          value={form.username}
-          errors={errors.username}
-          onChange={(v) => setField('username', v)}
-        />
         <FormField
           label="Email"
           name="email"
@@ -129,6 +137,11 @@ export default function RegisterPage() {
           errors={errors.confirm_password}
           onChange={(v) => setField('confirm_password', v)}
         />
+        {errors.form?.map((text) => (
+          <div key={text} className="form-error-text">
+            {text}
+          </div>
+        ))}
         <button type="submit" className="btn btn-primary" disabled={submitting}>
           {submitting ? 'Регистрация...' : 'Зарегистрироваться'}
         </button>

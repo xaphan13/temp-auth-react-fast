@@ -1,0 +1,1 @@
+PASS: fastapi-application/md_articles absent

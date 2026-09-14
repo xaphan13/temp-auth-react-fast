@@ -1,0 +1,10 @@
+npm error code ENOENT
+npm error syscall open
+npm error path /home/max/0_0_26_new_one/temp-auth-react-fast/package.json
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/home/max/0_0_26_new_one/temp-auth-react-fast/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /home/max/.npm/_logs/2026-09-14T14_56_16_267Z-debug-0.log
+
+build_exit=254

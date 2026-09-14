@@ -1,0 +1,13 @@
+--- forbidden blog dependency ---
+markdown absent
+--- preserved dependencies ---
+20:    "python-multipart>=0.0.18",
+22:    "fastapi-users[sqlalchemy]>=14.0.1",
+23:    "pillow>=11.0.0",
+--- lock package check ---
+439:name = "fastapi-users"
+770:name = "pillow"
+1008:name = "python-multipart"
+1046:name = "pyyaml"
+
+exit_code=0

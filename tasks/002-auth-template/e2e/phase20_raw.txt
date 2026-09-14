@@ -1,0 +1,462 @@
+=== PHASE 20 FINAL QA ===
+temp_db=/tmp/phase20-qa-zbvy16m1/one_simple.db
+runtime_db_before_sha256=ddacef2b5b715b7578d9a076a5d80dc40a18ff6cf3aecb147cb2edaf5b83ec10
+temporary DB is selected by APP__DB__URL override; all Alembic/app commands below run from fastapi-application
+=== clean temporary SQLite migration and schema inspection ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application && ../.venv/bin/alembic upgrade heads)
+[exit=0]
+sqlite_tables=['alembic_version', 'order_product_association', 'orders', 'products', 'user']
+sqlite_schema_check=PASS
+=== frontend build ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast/frontend && npm run build)
+
+> frontend@0.0.1 build
+> tsc && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 42 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.59 kB │ gzip:  0.41 kB
+dist/assets/index-CQGcCi6A.css    8.27 kB │ gzip:  2.59 kB
+dist/assets/index-rrxOd0nF.js   180.60 kB │ gzip: 58.86 kB
+✓ built in 2.35s
+[exit=0]
+frontend_build=PASS
+=== start one uvicorn from fastapi-application with temporary DB ===
+server_pid=1445790
+openapi_ready_status=200
+=== OpenAPI and docs ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/openapi.headers -o /tmp/phase20-qa-zbvy16m1/openapi.body http://127.0.0.1:8000/openapi.json)
+[exit=0]
+[openapi] status=200 content_type=application/json body={"openapi":"3.1.0","info":{"title":"Example : Fast API - SQL - React","version":"0.1.0"},"paths":{"/api/v1/dep_examples/single-direct-dependency":{"get":{"tags":["Dependencies Examples"],"summary":"Single Direct Dependency","operationId":"single_direct_dependency_api_v1_dep_examples_single_direct_dependency_get","parameters":[{"name":"foobar","in":"header","required":true,"schema":{"type":"string","title":"Foobar"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/dep_examples/single-via-func":{"get":{"tags":["Dependencies Examples"],"summary":"Single Via Func","operationId":"single_via_func_api_v1_dep_examples_single_via_func_get","parameters":[{"name":"x-foo-bar","in":"header","required":false,"schema":{"type":"string","default":"","title":"X-Foo-Bar"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/dep_examples/multi-direct-and-via-func":{"get":{"tags":["Dependencies Examples"],"summary":"Multi Direct And Via Func","operationId":"multi_direct_and_via_func_api_v1_dep_examples_multi_direct_and_via_func_get","parameters":[{"name":"x-fizz-buzz","in":"header","required":true,"schema":{"type":"string","title":"X-Fizz-Buzz"}},{"name":"x-foo-bar","in":"header","required":false,"schema":{"type":"string","default":"","title":"X-Foo-Bar"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/dep_examples/multi-indirect":{"get":{"tags":["Dependencies Examples"],"summary":"Multi Indirect Dependencies","operationId":"multi_indirect_dependencies_api_v1_dep_examples_multi_indirect_get","parameters":[{"name":"x-foo-bar","in":"header","required":false,"schema":{"type":"string","default":"","title":"X-Foo-Bar"}},{"name":"x-fizz-buzz","in":"header","required":false,"schema":{"type":"string","default":"FizzBuzz","title":"X-Fizz-Buzz"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/dep_examples/helper-as-dependency":{"get":{"tags":["Dependencies Examples"],"summary":"Helper As Dependency","operationId":"helper_as_dependency_api_v1_dep_examples_helper_as_dependency_get","parameters":[{"name":"x-helper-name","in":"header","required":false,"schema":{"type":"string","default":"","title":"X-Helper-Name"}},{"name":"x-helper-default-value","in":"header","required":false,"schema":{"type":"string","default":"","title":"X-Helper-Default-Value"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/dep_examples/great-service-as-dependency":{"get":{"tags":["Dependencies Examples"],"summary":"Get Great Service Dependency","operationId":"get_great_service_dependency_api_v1_dep_examples_great_service_as_dependency_get","parameters":[{"name":"x-great-service-name","in":"header","required":true,"schema":{"type":"string","title":"X-Great-Service-Name"}},{"name":"x-great-service-default-value","in":"header","required":true,"schema":{"type":"string","title":"X-Great-Service-Default-Value"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/dep_examples/direct-cls-dependency":{"get":{"tags":["Dependencies Examples"],"summary":"Direct Cls Dependency","operationId":"direct_cls_dependency_api_v1_dep_examples_direct_cls_dependency_get","parameters":[{"name":"x-access-token","in":"header","required":true,"schema":{"type":"string","title":"X-Access-Token"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/fastapi_class_old/my_items/{item_id}":{"get":{"tags":["My Parameters - FastAPI Class Old"],"summary":"Fastapi Class Old","operationId":"fastapi_class_old_api_v1_fastapi_class_old_my_items__item_id__get","parameters":[{"name":"item_id","in":"path","required":true,"schema":{"type":"integer","minimum":1,"description":"Path - item_id должен быть больше 0","title":"Item Id"},"description":"Path - item_id должен быть больше 0"},{"name":"param_id","in":"query","required":false,"schema":{"anyOf":[{"type":"integer"},{"type":"null"}],"description":"Query - первый параметр","title":"Param Id"},"description":"Query - первый параметр"},{"name":"user-id","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Header - ай-ди клиента","title":"User-Id"},"description":"Header - ай-ди клиента"},{"name":"number-req","in":"cookie","required":false,"schema":{"type":"integer","description":"Cookie - количество запросов от клиента","default":1,"title":"Number-Req"},"description":"Cookie - количество запросов от клиента"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/RespFieldStyle"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/fastapi_class_annotated/my_items/{item_id}":{"get":{"tags":["My Parameters - FastAPI Class Annotated"],"summary":"Fastapi Class Annotated","operationId":"fastapi_class_annotated_api_v1_fastapi_class_annotated_my_items__item_id__get","parameters":[{"name":"item_id","in":"path","required":true,"schema":{"type":"integer","minimum":1,"description":"Path - item_id должен быть больше 0","title":"Item Id"},"description":"Path - item_id должен быть больше 0"},{"name":"param_id","in":"query","required":false,"schema":{"anyOf":[{"type":"integer"},{"type":"null"}],"description":"Query - первый параметр","title":"Param Id"},"description":"Query - первый параметр"},{"name":"user-id","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Header - ай-ди клиента","title":"User-Id"},"description":"Header - ай-ди клиента"},{"name":"number-req","in":"cookie","required":false,"schema":{"type":"integer","description":"Cookie - количество запросов от клиента","default":1,"title":"Number-Req"},"description":"Cookie - количество запросов от клиента"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/RespAnnotated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/depends_class_annotated/my_items/{item_id}":{"get":{"tags":["My Parameters - Depends Class Annotated"],"summary":"Depends Class Annotated","operationId":"depends_class_annotated_api_v1_depends_class_annotated_my_items__item_id__get","parameters":[{"name":"item_id","in":"path","required":true,"schema":{"type":"integer","minimum":1,"description":"Path - item_id должен быть больше 0","title":"Item Id"},"description":"Path - item_id должен быть больше 0"},{"name":"param_id","in":"query","required":false,"schema":{"anyOf":[{"type":"integer"},{"type":"null"}],"description":"Query - первый параметр","title":"Param Id"},"description":"Query - первый параметр"},{"name":"user-id","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Header - ай-ди клиента","title":"User-Id"},"description":"Header - ай-ди клиента"},{"name":"number-req","in":"cookie","required":false,"schema":{"type":"integer","description":"Cookie - количество запросов от клиента","default":1,"title":"Number-Req"},"description":"Cookie - количество запросов от клиента"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/RespAfterValid"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/depends_function_annotated/my_items/{item_id}":{"get":{"tags":["My Parameters - Depends Functions Annotated"],"summary":"Depends Function Annotated","operationId":"depends_function_annotated_api_v1_depends_function_annotated_my_items__item_id__get","parameters":[{"name":"item_id","in":"path","required":true,"schema":{"type":"integer","minimum":1,"description":"Path - item_id должен быть больше 0","title":"Item Id"},"description":"Path - item_id должен быть больше 0"},{"name":"param_id","in":"query","required":false,"schema":{"anyOf":[{"type":"integer"},{"type":"null"}],"description":"Query - первый параметр","title":"Param Id"},"description":"Query - первый параметр"},{"name":"user-id","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Header - ай-ди клиента","title":"User-Id"},"description":"Header - ай-ди клиента"},{"name":"number-req","in":"cookie","required":false,"schema":{"type":"integer","description":"Cookie - количество запросов от клиента","default":1,"title":"Number-Req"},"description":"Cookie - количество запросов от клиента"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/RespDecorValid"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/orders/add_order":{"post":{"tags":["Examples - Order - add get joinedload"],"summary":"Add Order","operationId":"add_order_orders_add_order_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OrderCreateBody"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/OrderResp"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/orders/insert_order":{"post":{"tags":["Examples - Order - add get joinedload"],"summary":"Insert Order","operationId":"insert_order_orders_insert_order_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OrderCreateBody"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/OrderCreateBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/orders/get_order_filter_by":{"get":{"tags":["Examples - Order - add get joinedload"],"summary":"Get Order Filter By","operationId":"get_order_filter_by_orders_get_order_filter_by_get","parameters":[{"name":"id","in":"query","required":false,"schema":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Id"}},{"name":"created_at","in":"query","required":false,"schema":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Created At"}},{"name":"promocode","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Promocode"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/OrderResp"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/orders/get_order_where":{"get":{"tags":["Examples - Order - add get joinedload"],"summary":"Get Order Where","operationId":"get_order_where_orders_get_order_where_get","parameters":[{"name":"id","in":"query","required":false,"schema":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Id"}},{"name":"created_at","in":"query","required":false,"schema":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Created At"}},{"name":"promocode","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Promocode"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"anyOf":[{"$ref":"#/components/schemas/OrderResp"},{"type":"array","items":{"$ref":"#/components/schemas/OrderResp"}}],"title":"Response Get Order Where Orders Get Order Where Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/orders/get_all_orders":{"get":{"tags":["Examples - Order - add get joinedload"],"summary":"Get All Orders","operationId":"get_all_orders_orders_get_all_orders_get","parameters":[{"name":"params","in":"query","required":true,"schema":{"$ref":"#/components/schemas/OrderGetAllOrderbyQuery"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/OrderResp"},"title":"Response Get All Orders Orders Get All Orders Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/orders/get_all_join":{"get":{"tags":["Examples - Order - add get joinedload"],"summary":"Get All Join","operationId":"get_all_join_orders_get_all_join_get","parameters":[{"name":"variant","in":"query","required":false,"schema":{"type":"integer","default":1,"title":"Variant"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/OrderRespWithProducts"},"title":"Response Get All Join Orders Get All Join Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/auth/jwt/login":{"post":{"tags":["auth-jwt"],"summary":"Auth:Jwt.Login","operationId":"auth_jwt_login_auth_jwt_login_post","requestBody":{"content":{"application/x-www-form-urlencoded":{"schema":{"$ref":"#/components/schemas/Body_auth_jwt_login_auth_jwt_login_post"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"400":{"description":"Bad Request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorModel"},"examples":{"LOGIN_BAD_CREDENTIALS":{"summary":"Bad credentials or the user is inactive.","value":{"detail":"LOGIN_BAD_CREDENTIALS"}},"LOGIN_USER_NOT_VERIFIED":{"summary":"The user is not verified.","value":{"detail":"LOGIN_USER_NOT_VERIFIED"}}}}}},"204":{"description":"No Content"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/auth/jwt/logout":{"post":{"tags":["auth-jwt"],"summary":"Auth:Jwt.Logout","operationId":"auth_jwt_logout_auth_jwt_logout_post","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"401":{"description":"Missing token or inactive user."},"204":{"description":"No Content"}},"security":[{"APIKeyCookie":[]}]}},"/auth/register":{"post":{"tags":["auth-register"],"summary":"Register:Register","operationId":"register_register_auth_register_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserCreate"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserRead"}}}},"400":{"description":"Bad Request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorModel"},"examples":{"REGISTER_USER_ALREADY_EXISTS":{"summary":"A user with this email already exists.","value":{"detail":"REGISTER_USER_ALREADY_EXISTS"}},"REGISTER_INVALID_PASSWORD":{"summary":"Password validation failed.","value":{"detail":{"code":"REGISTER_INVALID_PASSWORD","reason":"Password should beat least 3 characters"}}}}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/users/me":{"get":{"tags":["users"],"summary":"Users:Current User","operationId":"users_current_user_users_me_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserRead"}}}},"401":{"description":"Missing token or inactive user."}},"security":[{"APIKeyCookie":[]}]},"patch":{"tags":["users"],"summary":"Users:Patch Current User","operationId":"users_patch_current_user_users_me_patch","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserUpdate"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserRead"}}}},"401":{"description":"Missing token or inactive user."},"400":{"description":"Bad Request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorModel"},"examples":{"UPDATE_USER_EMAIL_ALREADY_EXISTS":{"summary":"A user with this email already exists.","value":{"detail":"UPDATE_USER_EMAIL_ALREADY_EXISTS"}},"UPDATE_USER_INVALID_PASSWORD":{"summary":"Password validation failed.","value":{"detail":{"code":"UPDATE_USER_INVALID_PASSWORD","reason":"Password should beat least 3 characters"}}}}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"APIKeyCookie":[]}]}},"/auth/account":{"post":{"tags":["auth-account"],"summary":"Auth.Account Post","operationId":"auth_account_post_auth_account_post","requestBody":{"content":{"multipart/form-data":{"schema":{"$ref":"#/components/schemas/Body_auth_account_post_auth_account_post"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"APIKeyCookie":[]}]}},"/api/v1/auth/protected":{"get":{"tags":["auth"],"summary":"Protected","operationId":"protected_api_v1_auth_protected_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}},"security":[{"APIKeyCookie":[]}]}}},"components":{"schemas":{"Body_auth_account_post_auth_account_post":{"properties":{"username":{"type":"string","title":"Username","default":""},"email":{"type":"string","title":"Email","default":""},"picture":{"anyOf":[{"type":"string","contentMediaType":"application/octet-stream"},{"type":"null"}],"title":"Picture"}},"type":"object","title":"Body_auth_account_post_auth_account_post"},"Body_auth_jwt_login_auth_jwt_login_post":{"properties":{"grant_type":{"anyOf":[{"type":"string","pattern":"^password$"},{"type":"null"}],"title":"Grant Type"},"username":{"type":"string","title":"Username"},"password":{"type":"string","format":"password","title":"Password"},"scope":{"type":"string","title":"Scope","default":""},"client_id":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Client Id"},"client_secret":{"anyOf":[{"type":"string"},{"type":"null"}],"format":"password","title":"Client Secret"}},"type":"object","required":["username","password"],"title":"Body_auth_jwt_login_auth_jwt_login_post"},"ErrorModel":{"properties":{"detail":{"anyOf":[{"type":"string"},{"additionalProperties":{"type":"string"},"type":"object"}],"title":"Detail"}},"type":"object","required":["detail"],"title":"ErrorModel"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"OrderCreateBody":{"properties":{"promocode":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Promocode"}},"type":"object","title":"OrderCreateBody"},"OrderGetAllOrderbyQuery":{"type":"string","enum":["id","time","promocode"],"title":"OrderGetAllOrderbyQuery"},"OrderResp":{"properties":{"id":{"type":"integer","title":"Id"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"promocode":{"type":"string","title":"Promocode"}},"type":"object","required":["id","created_at","promocode"],"title":"OrderResp"},"OrderRespWithProducts":{"properties":{"id":{"type":"integer","title":"Id"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"promocode":{"type":"string","title":"Promocode"},"products":{"items":{"$ref":"#/components/schemas/ProductResp"},"type":"array","title":"Products"}},"type":"object","required":["id","created_at","promocode","products"],"title":"OrderRespWithProducts"},"ProductResp":{"properties":{"id":{"type":"integer","title":"Id"},"name":{"type":"string","title":"Name"},"description":{"type":"string","title":"Description"},"price":{"type":"integer","title":"Price"}},"type":"object","required":["id","name","description","price"],"title":"ProductResp"},"RespAfterValid":{"properties":{"path":{"type":"integer","minimum":1.0,"title":"Path","description":"ID из URL"},"query":{"anyOf":[{"type":"integer","maximum":1000.0,"minimum":1.0},{"type":"null"}],"title":"Query","description":"Параметр Query"},"header":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Header","description":"ID пользователя из заголовка"},"cookie":{"type":"integer","title":"Cookie","description":"Счетчик из куки"},"request":{"type":"integer","title":"Request"}},"type":"object","required":["path","cookie","request"],"title":"RespAfterValid"},"RespAnnotated":{"properties":{"path":{"type":"integer","title":"Path","description":"ID из пути URL"},"query":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Query","description":"ID из параметров запроса"},"header":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Header","description":"ID пользователя из заголовка"},"cookie":{"type":"integer","title":"Cookie","description":"Счетчик из куки"},"request":{"type":"integer","title":"Request","description":"Порт клиента"}},"type":"object","required":["path","cookie","request"],"title":"RespAnnotated"},"RespDecorValid":{"properties":{"path":{"type":"integer","title":"Path"},"query":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Query"},"header":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Header","description":"ID пользователя из заголовка"},"cookie":{"type":"integer","title":"Cookie","description":"Счетчик из куки"},"request":{"type":"integer","title":"Request"}},"type":"object","required":["path","cookie","request"],"title":"RespDecorValid"},"RespFieldStyle":{"properties":{"path":{"type":"integer","title":"Path","description":"ID из пути URL"},"query":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Query","description":"ID из параметров запроса"},"header":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Header","description":"ID пользователя из заголовка"},"cookie":{"type":"integer","title":"Cookie","description":"Счетчик из куки"},"request":{"type":"integer","title":"Request","description":"Порт клиента"}},"type":"object","required":["path","cookie","request"],"title":"RespFieldStyle"},"UserCreate":{"properties":{"email":{"type":"string","format":"email","title":"Email"},"password":{"type":"string","title":"Password"},"is_active":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Active","default":true},"is_superuser":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Superuser","default":false},"is_verified":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Verified","default":false}},"type":"object","required":["email","password"],"title":"UserCreate"},"UserRead":{"properties":{"id":{"type":"string","format":"uuid","title":"Id"},"email":{"type":"string","format":"email","title":"Email"},"is_active":{"type":"boolean","title":"Is Active","default":true},"is_superuser":{"type":"boolean","title":"Is Superuser","default":false},"is_verified":{"type":"boolean","title":"Is Verified","default":false},"username":{"type":"string","title":"Username"},"image_file":{"type":"string","title":"Image File"}},"type":"object","required":["id","email","username","image_file"],"title":"UserRead"},"UserUpdate":{"properties":{"password":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Password"},"email":{"anyOf":[{"type":"string","format":"email"},{"type":"null"}],"title":"Email"},"is_active":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Active"},"is_superuser":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Superuser"},"is_verified":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Verified"}},"type":"object","title":"UserUpdate"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"},"input":{"title":"Input"},"ctx":{"type":"object","title":"Context"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}},"securitySchemes":{"APIKeyCookie":{"type":"apiKey","in":"cookie","name":"auth"}}}}
+openapi_path_count=23
+openapi_paths=['/api/v1/auth/protected', '/api/v1/dep_examples/direct-cls-dependency', '/api/v1/dep_examples/great-service-as-dependency', '/api/v1/dep_examples/helper-as-dependency', '/api/v1/dep_examples/multi-direct-and-via-func', '/api/v1/dep_examples/multi-indirect', '/api/v1/dep_examples/single-direct-dependency', '/api/v1/dep_examples/single-via-func', '/api/v1/depends_class_annotated/my_items/{item_id}', '/api/v1/depends_function_annotated/my_items/{item_id}', '/api/v1/fastapi_class_annotated/my_items/{item_id}', '/api/v1/fastapi_class_old/my_items/{item_id}', '/auth/account', '/auth/jwt/login', '/auth/jwt/logout', '/auth/register', '/orders/add_order', '/orders/get_all_join', '/orders/get_all_orders', '/orders/get_order_filter_by', '/orders/get_order_where', '/orders/insert_order', '/users/me']
+openapi_checks=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/docs.headers -o /tmp/phase20-qa-zbvy16m1/docs.body http://127.0.0.1:8000/docs)
+[exit=0]
+[docs] status=200 content_type=text/html; charset=utf-8 body=
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+    <link rel="shortcut icon" href="https://fastapi.tiangolo.com/img/favicon.png">
+    <title>Example : Fast API - SQL - React - Swagger UI</title>
+    </head>
+    <body>
+    <div id="swagger-ui">
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <!-- `SwaggerUIBundle` is now available on the page -->
+    <script>
+    const ui = SwaggerUIBundle({
+        url: '/openapi.json',
+    "dom_id": "#swagger-ui",
+"layout": "BaseLayout",
+"deepLinking": true,
+"showExtensions": true,
+"showCommonExtensions": true,
+oauth2RedirectUrl: window.location.origin + '/docs/oauth2-redirect',
+    presets: [
+        SwaggerUIBundle.presets.apis,
+        SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+    })
+    </script>
+    </body>
+    </html>
+    
+=== anonymous boundary and invalid registration ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/anonymous_me.headers -o /tmp/phase20-qa-zbvy16m1/anonymous_me.body http://127.0.0.1:8000/users/me)
+[exit=0]
+[anonymous_me] status=401 content_type=application/json body={"detail":"Unauthorized"}
+anonymous_me_json_401=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/anonymous_protected.headers -o /tmp/phase20-qa-zbvy16m1/anonymous_protected.body http://127.0.0.1:8000/api/v1/auth/protected)
+[exit=0]
+[anonymous_protected] status=401 content_type=application/json body={"detail":"Unauthorized"}
+anonymous_protected_json_401=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/invalid_register.headers -o /tmp/phase20-qa-zbvy16m1/invalid_register.body -X POST -H 'Content-Type: application/json' --data '{"email":"not-an-email","password":"short"}' http://127.0.0.1:8000/auth/register)
+[exit=0]
+[invalid_register] status=422 content_type=application/json body={"detail":[{"type":"value_error","loc":["body","email"],"msg":"value is not a valid email address: An email address must have an @-sign.","input":"not-an-email","ctx":{"reason":"An email address must have an @-sign."}}]}
+invalid_register_json_422=PASS
+unique_email=qa.phase20.1789406087607784757@example.com updated_email=qa.phase20.updated.1789406087607786640@example.com username=qa2007788374
+=== registration/login/me/protected/account/logout ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/register.headers -o /tmp/phase20-qa-zbvy16m1/register.body -X POST -H 'Content-Type: application/json' --data '{"email":"qa.phase20.1789406087607784757@example.com","password":"Phase20-password-Valid"}' http://127.0.0.1:8000/auth/register)
+[exit=0]
+[register] status=201 content_type=application/json body={"id":"f96235d9-cc1e-4558-9b02-10843149c8e2","email":"qa.phase20.1789406087607784757@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa.phase20.178940608","image_file":"default.jpg"}
+register_201_user_no_password=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/login.headers -o /tmp/phase20-qa-zbvy16m1/login.body -c /tmp/phase20-qa-zbvy16m1/cookies.txt -b /tmp/phase20-qa-zbvy16m1/cookies.txt -X POST -H 'Content-Type: application/x-www-form-urlencoded' --data-urlencode 'username=qa.phase20.1789406087607784757@example.com' --data-urlencode 'password=Phase20-password-Valid' http://127.0.0.1:8000/auth/jwt/login)
+[exit=0]
+[login] status=204 content_type= body=
+login_cookie_jar=NONEMPTY
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/authorized_me.headers -o /tmp/phase20-qa-zbvy16m1/authorized_me.body -b /tmp/phase20-qa-zbvy16m1/cookies.txt http://127.0.0.1:8000/users/me)
+[exit=0]
+[authorized_me] status=200 content_type=application/json body={"id":"f96235d9-cc1e-4558-9b02-10843149c8e2","email":"qa.phase20.1789406087607784757@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa.phase20.178940608","image_file":"default.jpg"}
+authorized_me_email=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/authorized_protected.headers -o /tmp/phase20-qa-zbvy16m1/authorized_protected.body -b /tmp/phase20-qa-zbvy16m1/cookies.txt http://127.0.0.1:8000/api/v1/auth/protected)
+[exit=0]
+[authorized_protected] status=200 content_type=application/json body={"authenticated":true,"user":{"id":"f96235d9-cc1e-4558-9b02-10843149c8e2","email":"qa.phase20.1789406087607784757@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa.phase20.178940608","image_file":"default.jpg"}}
+protected_authenticated_user_no_password=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/account_update.headers -o /tmp/phase20-qa-zbvy16m1/account_update.body -b /tmp/phase20-qa-zbvy16m1/cookies.txt -X POST -F 'username=qa2007788374' -F 'email=qa.phase20.updated.1789406087607786640@example.com' http://127.0.0.1:8000/auth/account)
+[exit=0]
+[account_update] status=200 content_type=application/json body={"message":"Your account has been updated!","category":"success","user":{"id":"f96235d9-cc1e-4558-9b02-10843149c8e2","username":"qa2007788374","email":"qa.phase20.updated.1789406087607786640@example.com","image_file":"default.jpg","is_active":true,"is_superuser":false,"is_verified":false}}
+account_multipart_no_picture_200=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/updated_me.headers -o /tmp/phase20-qa-zbvy16m1/updated_me.body -b /tmp/phase20-qa-zbvy16m1/cookies.txt http://127.0.0.1:8000/users/me)
+[exit=0]
+[updated_me] status=200 content_type=application/json body={"id":"f96235d9-cc1e-4558-9b02-10843149c8e2","email":"qa.phase20.updated.1789406087607786640@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa2007788374","image_file":"default.jpg"}
+updated_me=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/logout.headers -o /tmp/phase20-qa-zbvy16m1/logout.body -b /tmp/phase20-qa-zbvy16m1/cookies.txt -c /tmp/phase20-qa-zbvy16m1/cookies.txt -X POST http://127.0.0.1:8000/auth/jwt/logout)
+[exit=0]
+[logout] status=204 content_type= body=
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/post_logout_protected.headers -o /tmp/phase20-qa-zbvy16m1/post_logout_protected.body -b /tmp/phase20-qa-zbvy16m1/cookies.txt http://127.0.0.1:8000/api/v1/auth/protected)
+[exit=0]
+[post_logout_protected] status=401 content_type=application/json body={"detail":"Unauthorized"}
+logout_then_protected_401=PASS
+=== retained demo/order and removed blog ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/demo.headers -o /tmp/phase20-qa-zbvy16m1/demo.body -H 'foobar: phase20' http://127.0.0.1:8000/api/v1/dep_examples/single-direct-dependency)
+[exit=0]
+[demo] status=200 content_type=application/json body={"foobar":"phase20","message":"single direct dependency foobar"}
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/orders.headers -o /tmp/phase20-qa-zbvy16m1/orders.body 'http://127.0.0.1:8000/orders/get_all_orders?params=id')
+[exit=0]
+[orders] status=200 content_type=application/json body=[]
+orders_valid_json_array=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/blog.headers -o /tmp/phase20-qa-zbvy16m1/blog.body http://127.0.0.1:8000/api/blog/articles)
+[exit=0]
+[blog] status=404 content_type=application/json body={"detail":"Not Found"}
+blog_json_404=PASS
+=== SPA and API fallback ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/spa_protected.headers -o /tmp/phase20-qa-zbvy16m1/spa_protected.body http://127.0.0.1:8000/protected)
+[exit=0]
+[spa_protected] status=200 content_type=text/html; charset=utf-8 body=<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Учебный шаблон FastAPI для регистрации, входа и защищённых маршрутов."
+    />
+
+    <title>Auth-шаблон FastAPI</title>
+    <script type="module" crossorigin src="/assets/index-rrxOd0nF.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CQGcCi6A.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+spa_protected_html_200=PASS
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && curl -sS -D /tmp/phase20-qa-zbvy16m1/api_nope.headers -o /tmp/phase20-qa-zbvy16m1/api_nope.body http://127.0.0.1:8000/api/nope)
+[exit=0]
+[api_nope] status=404 content_type=application/json body={"detail":"Not Found"}
+api_nope_json_404=PASS
+=== filesystem, dependency and frontend marker absence ===
+fastapi-application/md_articles absent=True
+fastapi-application/content_art absent=True
+fastapi-application/ex_user_post absent=True
+docs/06_blog.md absent=True
+backend_runtime_reference_hits=[]
+fastapi-users_present=True
+python-multipart_present=True
+pillow_present=True
+frontend_all_text_marker_hits=['api/blog']
+frontend_code_marker_hits=[]
+frontend_bundle_marker_hits=[]
+filesystem_dependency_frontend_checks=PASS
+=== narrow ruff migration/backend and import ===
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast && uv run ruff check fastapi-application/alembic/versions fastapi-application/auth_users fastapi-application/setup_frontend.py fastapi-application/main.py)
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/account.py:33:26
+   |
+31 | async def account_post(
+32 |     session: CurrentSession,
+33 |     current_user: User = Depends(active_user),
+   |                          ^^^^^^^^^^^^^^^^^^^^
+34 |     username: str = Form(""),
+35 |     email: str = Form(""),
+   |
+
+B008 Do not perform function call `File` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/account.py:36:34
+   |
+34 |     username: str = Form(""),
+35 |     email: str = Form(""),
+36 |     picture: UploadFile | None = File(None),
+   |                                  ^^^^^^^^^^
+37 | ):
+38 |     errors: dict[str, list[str]] = {}
+   |
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+  --> fastapi-application/auth_users/account.py:49:5
+   |
+47 |       elif not is_valid_email(email):
+48 |           errors.setdefault("email", []).append("Invalid email address.")
+49 | /     if username and username != current_user.username:
+50 | |         if await username_exists(session, username):
+   | |____________________________________________________^
+51 |               errors.setdefault("username", []).append(ERROR_USERNAME_TAKEN)
+52 |       if email and email != current_user.email:
+   |
+help: Combine `if` statements using `and`
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+  --> fastapi-application/auth_users/account.py:52:5
+   |
+50 |           if await username_exists(session, username):
+51 |               errors.setdefault("username", []).append(ERROR_USERNAME_TAKEN)
+52 | /     if email and email != current_user.email:
+53 | |         if await email_exists(session, email):
+   | |______________________________________________^
+54 |               errors.setdefault("email", []).append(ERROR_EMAIL_TAKEN)
+55 |       if errors:
+   |
+help: Combine `if` statements using `and`
+
+BLE001 Do not catch blind exception: `Exception`
+  --> fastapi-application/auth_users/helpers.py:34:12
+   |
+32 |         EmailStr._validate(email)  # type: ignore[attr-defined]
+33 |         return True
+34 |     except Exception:
+   |            ^^^^^^^^^
+35 |         return False
+   |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/user_manager.py:95:39
+   |
+94 | async def get_user_manager(
+95 |     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
+   |                                       ^^^^^^^^^^^^^^^^^^^^
+96 | ) -> AsyncGenerator[UserManager, None]:
+97 |     """DI: UserManager, получающий user_db из get_user_db."""
+   |
+
+Found 6 errors.
+No fixes available (1 hidden fix can be enabled with the `--unsafe-fixes` option).
+[exit=1]
+narrow_ruff_exit=1
+narrow_ruff_disposition=FAIL: existing auth_users findings; product code unchanged
+
+$ (cd /home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application && ../.venv/bin/python -c "from main import main_app; paths=main_app.openapi()['paths']; print('import_route_count=', len(paths)); assert len(paths)==23")
+import_route_count= 23
+[exit=0]
+=== application logs and runtime DB immutability ===
+application_log_files=['/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/log/one_fast.log']
+--- /home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/log/one_fast.log (19589 bytes) ---
+me/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-14 20:05:38,525 - create_fastapi.lifespan(24) - [MainThread] - [128947876161344] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-2pgc7mg_/one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-14 20:05:38,525 - create_fastapi.lifespan(26) - [MainThread] - [128947876161344] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-2pgc7mg_/one_simple.db')
+/* 2026-09-14 20:05:39,105 - user_manager.on_after_register(84) - [MainThread] - [128947876161344] */  
+INFO: auth_users: registered qa.phase20.1789405538851821186@example.com
+/* 2026-09-14 20:06:20,353 - setup_frontend.mount_frontend(46) - [MainThread] - [132630204639040] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-14 20:06:20,383 - create_fastapi.lifespan(24) - [MainThread] - [132630204639040] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-uu3glhxl/one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-14 20:06:20,383 - create_fastapi.lifespan(26) - [MainThread] - [132630204639040] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-uu3glhxl/one_simple.db')
+/* 2026-09-14 20:06:21,012 - user_manager.on_after_register(84) - [MainThread] - [132630204639040] */  
+INFO: auth_users: registered qa.phase20.1789405580787699786@example.com
+/* 2026-09-14 20:06:55,358 - setup_frontend.mount_frontend(46) - [MainThread] - [130307447600960] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-14 20:06:55,385 - create_fastapi.lifespan(24) - [MainThread] - [130307447600960] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-oobykhwj/one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-14 20:06:55,385 - create_fastapi.lifespan(26) - [MainThread] - [130307447600960] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-oobykhwj/one_simple.db')
+/* 2026-09-14 20:06:56,039 - user_manager.on_after_register(84) - [MainThread] - [130307447600960] */  
+INFO: auth_users: registered qa.phase20.1789405615810186638@example.com
+/* 2026-09-14 20:07:37,341 - setup_frontend.mount_frontend(46) - [MainThread] - [130400932206400] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-14 20:07:37,384 - create_fastapi.lifespan(24) - [MainThread] - [130400932206400] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-6r0xs2vc/one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-14 20:07:37,384 - create_fastapi.lifespan(26) - [MainThread] - [130400932206400] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-6r0xs2vc/one_simple.db')
+/* 2026-09-14 20:07:38,283 - user_manager.on_after_register(84) - [MainThread] - [130400932206400] */  
+INFO: auth_users: registered qa.phase20.1789405657970789280@example.com
+/* 2026-09-14 20:07:38,672 - router_order_one.get_all_orders(112) - [MainThread] - [130400932206400] */  
+INFO: get_all_orders : type(order_by_list_o)=<class 'list'>
+order_by_list_o=[<sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x7699515d7ce0>, <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x7699515d7d80>]
+/* 2026-09-14 20:08:46,562 - setup_frontend.mount_frontend(46) - [MainThread] - [132137679681344] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-14 20:08:46,591 - create_fastapi.lifespan(24) - [MainThread] - [132137679681344] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-4ys6xpgc/one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-14 20:08:46,591 - create_fastapi.lifespan(26) - [MainThread] - [132137679681344] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-4ys6xpgc/one_simple.db')
+/* 2026-09-14 20:08:47,194 - user_manager.on_after_register(84) - [MainThread] - [132137679681344] */  
+INFO: auth_users: registered qa.phase20.1789405726946776071@example.com
+/* 2026-09-14 20:08:47,580 - router_order_one.get_all_orders(112) - [MainThread] - [132137679681344] */  
+INFO: get_all_orders : type(order_by_list_o)=<class 'list'>
+order_by_list_o=[<sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x782daf9d7ce0>, <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x782daf9d7d80>]
+/* 2026-09-14 20:10:50,372 - setup_frontend.mount_frontend(46) - [MainThread] - [124195871352640] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-14 20:10:50,403 - create_fastapi.lifespan(24) - [MainThread] - [124195871352640] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-b6u8uary/one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-14 20:10:50,403 - create_fastapi.lifespan(26) - [MainThread] - [124195871352640] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-b6u8uary/one_simple.db')
+/* 2026-09-14 20:10:51,011 - user_manager.on_after_register(84) - [MainThread] - [124195871352640] */  
+INFO: auth_users: registered qa.phase20.1789405850801895268@example.com
+/* 2026-09-14 20:10:51,331 - router_order_one.get_all_orders(112) - [MainThread] - [124195871352640] */  
+INFO: get_all_orders : type(order_by_list_o)=<class 'list'>
+order_by_list_o=[<sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x70f496ee3ce0>, <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x70f496ee3d80>]
+/* 2026-09-14 20:14:47,127 - setup_frontend.mount_frontend(46) - [MainThread] - [134685588305728] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-14 20:14:47,154 - create_fastapi.lifespan(24) - [MainThread] - [134685588305728] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-zbvy16m1/one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-14 20:14:47,155 - create_fastapi.lifespan(26) - [MainThread] - [134685588305728] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:////tmp/phase20-qa-zbvy16m1/one_simple.db')
+/* 2026-09-14 20:14:47,831 - user_manager.on_after_register(84) - [MainThread] - [134685588305728] */  
+INFO: auth_users: registered qa.phase20.1789406087607784757@example.com
+/* 2026-09-14 20:14:48,145 - router_order_one.get_all_orders(112) - [MainThread] - [134685588305728] */  
+INFO: get_all_orders : type(order_by_list_o)=<class 'list'>
+order_by_list_o=[<sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x7a7eeabe7ce0>, <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x7a7eeabe7d80>]
+/* 2026-09-14 20:14:49,537 - setup_frontend.mount_frontend(46) - [MainThread] - [135551431022400] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+
+uvicorn_shutdown=PASS
+--- uvicorn log ---
+INFO:     Started server process [1445790]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:41264 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41266 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41272 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41284 - "GET /users/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:41296 - "GET /api/v1/auth/protected HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:41300 - "POST /auth/register HTTP/1.1" 422 Unprocessable Entity
+2026-09-14 20:14:47,621 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:47,635 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE lower(user.email) = lower(?)
+2026-09-14 20:14:47,635 INFO sqlalchemy.engine.Engine [generated in 0.00024s] ('qa.phase20.1789406087607784757@example.com',)
+2026-09-14 20:14:47,803 INFO sqlalchemy.engine.Engine INSERT INTO user (username, image_file, created_at, id, email, hashed_password, is_active, is_superuser, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-14 20:14:47,804 INFO sqlalchemy.engine.Engine [generated in 0.00064s] (None, 'default.jpg', '2026-09-14 17:14:47.803488', 'f96235d9-cc1e-4558-9b02-10843149c8e2', 'qa.phase20.1789406087607784757@example.com', '$argon2id$v=19$m=65536,t=3,p=4$eXcMfC95ZdnCSFqWODaQyw$1hJoiTDm3yTenDPes7zvvK9PYOuRFLIHRJwmZpX1fhA', 1, 0, 0)
+2026-09-14 20:14:47,806 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-14 20:14:47,816 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:47,818 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-14 20:14:47,818 INFO sqlalchemy.engine.Engine [generated in 0.00023s] ('f96235d9-cc1e-4558-9b02-10843149c8e2',)
+2026-09-14 20:14:47,821 INFO sqlalchemy.engine.Engine UPDATE user SET username=? WHERE user.id = ?
+2026-09-14 20:14:47,821 INFO sqlalchemy.engine.Engine [generated in 0.00027s] ('qa.phase20.178940608', 'f96235d9-cc1e-4558-9b02-10843149c8e2')
+2026-09-14 20:14:47,822 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-14 20:14:47,828 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:47,829 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-14 20:14:47,829 INFO sqlalchemy.engine.Engine [cached since 0.01112s ago] ('f96235d9-cc1e-4558-9b02-10843149c8e2',)
+/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py:144: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+  response = await f(request)
+INFO:     127.0.0.1:41316 - "POST /auth/register HTTP/1.1" 201 Created
+2026-09-14 20:14:47,835 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-14 20:14:47,849 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:47,849 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE lower(user.email) = lower(?)
+2026-09-14 20:14:47,849 INFO sqlalchemy.engine.Engine [cached since 0.2143s ago] ('qa.phase20.1789406087607784757@example.com',)
+INFO:     127.0.0.1:41318 - "POST /auth/jwt/login HTTP/1.1" 204 No Content
+2026-09-14 20:14:47,995 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-14 20:14:48,010 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:48,011 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-14 20:14:48,011 INFO sqlalchemy.engine.Engine [generated in 0.00025s] ('f96235d9-cc1e-4558-9b02-10843149c8e2',)
+INFO:     127.0.0.1:41326 - "GET /users/me HTTP/1.1" 200 OK
+2026-09-14 20:14:48,016 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-14 20:14:48,028 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:48,028 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-14 20:14:48,028 INFO sqlalchemy.engine.Engine [cached since 0.01734s ago] ('f96235d9-cc1e-4558-9b02-10843149c8e2',)
+INFO:     127.0.0.1:41334 - "GET /api/v1/auth/protected HTTP/1.1" 200 OK
+2026-09-14 20:14:48,030 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-14 20:14:48,047 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:48,047 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-14 20:14:48,047 INFO sqlalchemy.engine.Engine [cached since 0.03581s ago] ('f96235d9-cc1e-4558-9b02-10843149c8e2',)
+2026-09-14 20:14:48,049 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.username = ?
+2026-09-14 20:14:48,050 INFO sqlalchemy.engine.Engine [generated in 0.00022s] ('qa2007788374',)
+2026-09-14 20:14:48,051 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.email = ?
+2026-09-14 20:14:48,051 INFO sqlalchemy.engine.Engine [generated in 0.00019s] ('qa.phase20.updated.1789406087607786640@example.com',)
+2026-09-14 20:14:48,053 INFO sqlalchemy.engine.Engine UPDATE user SET username=?, email=? WHERE user.id = ?
+2026-09-14 20:14:48,053 INFO sqlalchemy.engine.Engine [generated in 0.00019s] ('qa2007788374', 'qa.phase20.updated.1789406087607786640@example.com', 'f96235d9-cc1e-4558-9b02-10843149c8e2')
+2026-09-14 20:14:48,054 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:41336 - "POST /auth/account HTTP/1.1" 200 OK
+2026-09-14 20:14:48,084 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:48,084 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-14 20:14:48,084 INFO sqlalchemy.engine.Engine [cached since 0.07307s ago] ('f96235d9-cc1e-4558-9b02-10843149c8e2',)
+INFO:     127.0.0.1:41344 - "GET /users/me HTTP/1.1" 200 OK
+2026-09-14 20:14:48,087 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-14 20:14:48,100 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:48,100 INFO sqlalchemy.engine.Engine SELECT user.username, user.image_file, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-14 20:14:48,100 INFO sqlalchemy.engine.Engine [cached since 0.08924s ago] ('f96235d9-cc1e-4558-9b02-10843149c8e2',)
+INFO:     127.0.0.1:41348 - "POST /auth/jwt/logout HTTP/1.1" 204 No Content
+2026-09-14 20:14:48,101 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:41358 - "GET /api/v1/auth/protected HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:41374 - "GET /api/v1/dep_examples/single-direct-dependency HTTP/1.1" 200 OK
+2026-09-14 20:14:48,145 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-14 20:14:48,146 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.created_at, orders.promocode 
+FROM orders ORDER BY orders.id, orders.created_at
+2026-09-14 20:14:48,147 INFO sqlalchemy.engine.Engine [generated in 0.00023s] ()
+INFO:     127.0.0.1:41388 - "GET /orders/get_all_orders?params=id HTTP/1.1" 200 OK
+2026-09-14 20:14:48,148 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:41398 - "GET /api/blog/articles HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41402 - "GET /protected HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41408 - "GET /api/nope HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1445790]
+
+runtime_db_after_sha256=ddacef2b5b715b7578d9a076a5d80dc40a18ff6cf3aecb147cb2edaf5b83ec10
+runtime_db_immutability=PASS
+PHASE20_RESULT=PASS

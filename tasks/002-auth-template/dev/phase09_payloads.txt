@@ -1,0 +1,19 @@
+frontend/src/pages/RegisterPage.tsx:95:      await register({ email: form.email, password: form.password });
+frontend/src/pages/AccountPage.tsx:7:import { getAccount, updateAccount, extractErrors, MessageResp } from '../api/auth';
+frontend/src/pages/AccountPage.tsx:28:    getAccount()
+frontend/src/pages/AccountPage.tsx:59:      const resp: MessageResp & { user: User } = await updateAccount({
+frontend/src/context/AuthContext.tsx:13:import { getCurrentUser } from '../api/auth';
+frontend/src/context/AuthContext.tsx:32:      const currentUser = await getCurrentUser();
+frontend/src/api/auth.ts:2:// getAccount, updateAccount (multipart). Backend — fastapi-users:
+frontend/src/api/auth.ts:7:import { ApiError, getJson, postForm, postJson, postMultipart } from './client';
+frontend/src/api/auth.ts:31:export function register(body: { email: string; password: string }): Promise<User> {
+frontend/src/api/auth.ts:32:  return postJson<User>('/auth/register', body);
+frontend/src/api/auth.ts:35:export async function getAccount(): Promise<{ user: User }> {
+frontend/src/api/auth.ts:40:export function updateAccount(body: {
+frontend/src/api/auth.ts:45:  const formData = new FormData();
+frontend/src/api/auth.ts:46:  formData.set('username', body.username);
+frontend/src/api/auth.ts:47:  formData.set('email', body.email);
+frontend/src/api/auth.ts:48:  if (body.picture) formData.set('picture', body.picture);
+frontend/src/api/auth.ts:49:  return postMultipart<MessageResp & { user: User }>('/auth/account', formData);
+frontend/src/api/auth.ts:52:// getCurrentUser: для AuthContext.refresh() — возвращает User или null
+frontend/src/api/auth.ts:54:export function getCurrentUser(): Promise<User | null> {

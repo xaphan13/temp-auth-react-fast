@@ -1,0 +1,2 @@
+registry import ok
+All checks passed!

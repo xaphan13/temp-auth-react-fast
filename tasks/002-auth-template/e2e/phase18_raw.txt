@@ -1,0 +1,962 @@
+=== PHASE 18 RAW QA RUN ===
+date=2026-09-14T18:54:26+03:00
+=== process/openapi preflight ===
+1406119 /home/max/0_0_26_new_one/temp-auth-react-fast/.venv/bin/python ../.venv/bin/uvicorn main:main_app --host 127.0.0.1 --port 8000
+1408025 bash -c set +e RAW="$PWD/../tasks/current/e2e/phase18_raw.txt" JAR=/tmp/phase18_cookie.jar rm -f "$JAR" : > "$RAW" exec > >(tee "$RAW") 2>&1 printf '%s\n' '=== PHASE 18 RAW QA RUN ===' printf 'date=%s\n' "$(date -Is)" printf '%s\n' '=== process/openapi preflight ===' pgrep -af 'uvicorn.*main:main_app' || true curl -m 3 -sS -o /tmp/phase18_openapi -w 'openapi_http=%{http_code}\n' http://127.0.0.1:8000/openapi.json || true printf '%s\n' '=== import/openapi assertions ===' ../.venv/bin/python -c 'from main import main_app; paths=main_app.openapi()["paths"]; print("path_count", len(paths)); print("protected_present", "/api/v1/auth/protected" in paths); print("blog_present", any(p.startswith("/api/blog") for p in paths)); print("users_id_present", "/users/{id}" in paths); print("users_me_present", "/users/me" in paths); assert len(paths)==23; assert "/api/v1/auth/protected" in paths; assert not any(p.startswith("/api/blog") for p in paths); assert "/users/{id}" not in paths; assert "/users/me" in paths' printf 'import_openapi_exit=%s\n' "$?" printf '%s\n' '=== endpoint smoke and anonymous boundary ===' printf '%s\n' '-- docs --' curl -sS -i http://127.0.0.1:8000/docs | sed -n '1,12p' printf '%s\n' '-- anonymous users/me --' curl -sS -i http://127.0.0.1:8000/users/me | sed -n '1,12p' printf '%s\n' '-- anonymous protected --' curl -sS -i http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,12p' printf '%s\n' '-- invalid register (auth route validation) --' curl -sS -i -X POST http://127.0.0.1:8000/auth/register -H 'content-type: application/json' --data '{"email":"not-an-email","password":"x"}' | sed -n '1,20p' printf '%s\n' '=== unique registration/auth/account flow ===' EMAIL="qa.phase18.$(date +%s%N)@example.com" PASSWORD='Phase18-password-Valid' USERNAME="qa18$(date +%s%N | cut -c1-12)" printf 'test_email=%s\nrequested_username=%s\n' "$EMAIL" "$USERNAME" printf '%s\n' '-- register exact email/password JSON --' REGISTER=$(curl -sS -w '\nHTTP_STATUS:%{http_code}\n' -X POST http://127.0.0.1:8000/auth/register -H 'content-type: application/json' --data "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}") printf '%s\n' "$REGISTER" printf '%s\n' '-- login form username=email/password, cookie jar --' curl -sS -i -c "$JAR" -X POST http://127.0.0.1:8000/auth/jwt/login -H 'content-type: application/x-www-form-urlencoded' --data-urlencode "username=$EMAIL" --data-urlencode "password=$PASSWORD" | sed -n '1,20p' printf '%s\n' '-- cookie jar --' if [ -f "$JAR" ]; then awk 'NF && $1 !~ /^#/ {print $0}' "$JAR"; else printf '%s\n' 'COOKIE_JAR_MISSING'; fi printf '%s\n' '-- authorized users/me --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/users/me | sed -n '1,20p' printf '%s\n' '-- authorized protected --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,24p' printf '%s\n' '-- account multipart update --' curl -sS -i -b "$JAR" -X POST http://127.0.0.1:8000/auth/account -F "username=$USERNAME" -F "email=$EMAIL" | sed -n '1,28p' printf '%s\n' '-- authorized me after account update --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/users/me | sed -n '1,20p' printf '%s\n' '-- static avatar route (derived from image_file where possible) --' IMAGE_FILE=$(curl -sS -b "$JAR" http://127.0.0.1:8000/users/me | ../.venv/bin/python -c 'import json,sys; print(json.load(sys.stdin).get("image_file", ""))' 2>/dev/null) printf 'image_file=%s\n' "$IMAGE_FILE" if [ -n "$IMAGE_FILE" ]; then curl -sS -i -b "$JAR" "http://127.0.0.1:8000/static/profile_pics/$IMAGE_FILE" | sed -n '1,12p'; else curl -sS -i http://127.0.0.1:8000/static/profile_pics/does-not-exist.png | sed -n '1,12p'; fi printf '%s\n' '-- logout --' curl -sS -i -b "$JAR" -X POST http://127.0.0.1:8000/auth/jwt/logout | sed -n '1,20p' printf '%s\n' '-- protected after logout --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,16p' printf '%s\n' '=== retained routes and removed blog ===' printf '%s\n' '-- demo endpoint --' curl -sS -i http://127.0.0.1:8000/api/v1/dep_examples/single-direct-dependency -H 'foobar: phase18' | sed -n '1,18p' printf '%s\n' '-- order endpoint --' curl -sS -i 'http://127.0.0.1:8000/orders/get_all_orders?params=id' | sed -n '1,24p' printf '%s\n' '-- order endpoint without query (route/validation) --' curl -sS -i http://127.0.0.1:8000/orders/get_all_orders | sed -n '1,16p' printf '%s\n' '-- blog endpoint JSON 404 --' curl -sS -i http://127.0.0.1:8000/api/blog/articles | sed -n '1,16p' printf '%s\n' '=== SPA routes ===' for path in / /login /register /account /protected; do printf '%s\n' "-- $path --"; curl -sS -i "http://127.0.0.1:8000$path" | sed -n '1,12p'; done printf '%s\n' '-- unknown API fallback --' curl -sS -i http://127.0.0.1:8000/api/not-a-route | sed -n '1,16p' printf '%s\n' '=== filesystem/runtime cleanup checks ===' for p in fastapi-application/md_articles fastapi-application/content_art fastapi-application/ex_user_post; do test ! -e "$p"; printf 'absent_check %s exit=%s\n' "$p" "$?"; done printf '%s\n' '-- runtime references --' rg -n 'md_articles|router_blog_api|content_art|ex_user_post' fastapi-application --glob '*.py' || printf '%s\n' 'no_runtime_refs' printf '%s\n' '-- manifest dependency markers --' rg -n -i 'markdown|pyyaml|itsdangerous|fastapi-users|python-multipart|pillow' pyproject.toml || true printf '%s\n' '=== application log files (tail) ===' for f in fastapi-application/log/*; do [ -f "$f" ] || continue; printf '\n--- %s ---\n' "$f"; tail -n 40 "$f"; done printf '%s\n' '=== END PHASE 18 RAW QA RUN ===' printf 'server_pid_to_stop=1406119\n'
+1408027 bash -c set +e RAW="$PWD/../tasks/current/e2e/phase18_raw.txt" JAR=/tmp/phase18_cookie.jar rm -f "$JAR" : > "$RAW" exec > >(tee "$RAW") 2>&1 printf '%s\n' '=== PHASE 18 RAW QA RUN ===' printf 'date=%s\n' "$(date -Is)" printf '%s\n' '=== process/openapi preflight ===' pgrep -af 'uvicorn.*main:main_app' || true curl -m 3 -sS -o /tmp/phase18_openapi -w 'openapi_http=%{http_code}\n' http://127.0.0.1:8000/openapi.json || true printf '%s\n' '=== import/openapi assertions ===' ../.venv/bin/python -c 'from main import main_app; paths=main_app.openapi()["paths"]; print("path_count", len(paths)); print("protected_present", "/api/v1/auth/protected" in paths); print("blog_present", any(p.startswith("/api/blog") for p in paths)); print("users_id_present", "/users/{id}" in paths); print("users_me_present", "/users/me" in paths); assert len(paths)==23; assert "/api/v1/auth/protected" in paths; assert not any(p.startswith("/api/blog") for p in paths); assert "/users/{id}" not in paths; assert "/users/me" in paths' printf 'import_openapi_exit=%s\n' "$?" printf '%s\n' '=== endpoint smoke and anonymous boundary ===' printf '%s\n' '-- docs --' curl -sS -i http://127.0.0.1:8000/docs | sed -n '1,12p' printf '%s\n' '-- anonymous users/me --' curl -sS -i http://127.0.0.1:8000/users/me | sed -n '1,12p' printf '%s\n' '-- anonymous protected --' curl -sS -i http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,12p' printf '%s\n' '-- invalid register (auth route validation) --' curl -sS -i -X POST http://127.0.0.1:8000/auth/register -H 'content-type: application/json' --data '{"email":"not-an-email","password":"x"}' | sed -n '1,20p' printf '%s\n' '=== unique registration/auth/account flow ===' EMAIL="qa.phase18.$(date +%s%N)@example.com" PASSWORD='Phase18-password-Valid' USERNAME="qa18$(date +%s%N | cut -c1-12)" printf 'test_email=%s\nrequested_username=%s\n' "$EMAIL" "$USERNAME" printf '%s\n' '-- register exact email/password JSON --' REGISTER=$(curl -sS -w '\nHTTP_STATUS:%{http_code}\n' -X POST http://127.0.0.1:8000/auth/register -H 'content-type: application/json' --data "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}") printf '%s\n' "$REGISTER" printf '%s\n' '-- login form username=email/password, cookie jar --' curl -sS -i -c "$JAR" -X POST http://127.0.0.1:8000/auth/jwt/login -H 'content-type: application/x-www-form-urlencoded' --data-urlencode "username=$EMAIL" --data-urlencode "password=$PASSWORD" | sed -n '1,20p' printf '%s\n' '-- cookie jar --' if [ -f "$JAR" ]; then awk 'NF && $1 !~ /^#/ {print $0}' "$JAR"; else printf '%s\n' 'COOKIE_JAR_MISSING'; fi printf '%s\n' '-- authorized users/me --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/users/me | sed -n '1,20p' printf '%s\n' '-- authorized protected --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,24p' printf '%s\n' '-- account multipart update --' curl -sS -i -b "$JAR" -X POST http://127.0.0.1:8000/auth/account -F "username=$USERNAME" -F "email=$EMAIL" | sed -n '1,28p' printf '%s\n' '-- authorized me after account update --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/users/me | sed -n '1,20p' printf '%s\n' '-- static avatar route (derived from image_file where possible) --' IMAGE_FILE=$(curl -sS -b "$JAR" http://127.0.0.1:8000/users/me | ../.venv/bin/python -c 'import json,sys; print(json.load(sys.stdin).get("image_file", ""))' 2>/dev/null) printf 'image_file=%s\n' "$IMAGE_FILE" if [ -n "$IMAGE_FILE" ]; then curl -sS -i -b "$JAR" "http://127.0.0.1:8000/static/profile_pics/$IMAGE_FILE" | sed -n '1,12p'; else curl -sS -i http://127.0.0.1:8000/static/profile_pics/does-not-exist.png | sed -n '1,12p'; fi printf '%s\n' '-- logout --' curl -sS -i -b "$JAR" -X POST http://127.0.0.1:8000/auth/jwt/logout | sed -n '1,20p' printf '%s\n' '-- protected after logout --' curl -sS -i -b "$JAR" http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,16p' printf '%s\n' '=== retained routes and removed blog ===' printf '%s\n' '-- demo endpoint --' curl -sS -i http://127.0.0.1:8000/api/v1/dep_examples/single-direct-dependency -H 'foobar: phase18' | sed -n '1,18p' printf '%s\n' '-- order endpoint --' curl -sS -i 'http://127.0.0.1:8000/orders/get_all_orders?params=id' | sed -n '1,24p' printf '%s\n' '-- order endpoint without query (route/validation) --' curl -sS -i http://127.0.0.1:8000/orders/get_all_orders | sed -n '1,16p' printf '%s\n' '-- blog endpoint JSON 404 --' curl -sS -i http://127.0.0.1:8000/api/blog/articles | sed -n '1,16p' printf '%s\n' '=== SPA routes ===' for path in / /login /register /account /protected; do printf '%s\n' "-- $path --"; curl -sS -i "http://127.0.0.1:8000$path" | sed -n '1,12p'; done printf '%s\n' '-- unknown API fallback --' curl -sS -i http://127.0.0.1:8000/api/not-a-route | sed -n '1,16p' printf '%s\n' '=== filesystem/runtime cleanup checks ===' for p in fastapi-application/md_articles fastapi-application/content_art fastapi-application/ex_user_post; do test ! -e "$p"; printf 'absent_check %s exit=%s\n' "$p" "$?"; done printf '%s\n' '-- runtime references --' rg -n 'md_articles|router_blog_api|content_art|ex_user_post' fastapi-application --glob '*.py' || printf '%s\n' 'no_runtime_refs' printf '%s\n' '-- manifest dependency markers --' rg -n -i 'markdown|pyyaml|itsdangerous|fastapi-users|python-multipart|pillow' pyproject.toml || true printf '%s\n' '=== application log files (tail) ===' for f in fastapi-application/log/*; do [ -f "$f" ] || continue; printf '\n--- %s ---\n' "$f"; tail -n 40 "$f"; done printf '%s\n' '=== END PHASE 18 RAW QA RUN ===' printf 'server_pid_to_stop=1406119\n'
+openapi_http=200
+=== import/openapi assertions ===
+path_count 23
+protected_present True
+blog_present False
+users_id_present False
+users_me_present True
+import_openapi_exit=0
+=== endpoint smoke and anonymous boundary ===
+-- docs --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 1031
+content-type: text/html; charset=utf-8
+
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+-- anonymous users/me --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- anonymous protected --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- invalid register (auth route validation) --
+HTTP/1.1 422 Unprocessable Entity
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 220
+content-type: application/json
+
+{"detail":[{"type":"value_error","loc":["body","email"],"msg":"value is not a valid email address: An email address must have an @-sign.","input":"not-an-email","ctx":{"reason":"An email address must have an @-sign."}}]}=== unique registration/auth/account flow ===
+test_email=qa.phase18.1789401268606336356@example.com
+requested_username=qa18178940126861
+-- register exact email/password JSON --
+Internal Server Error
+HTTP_STATUS:500
+-- login form username=email/password, cookie jar --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- cookie jar --
+-- authorized users/me --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- authorized protected --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- account multipart update --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- authorized me after account update --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- static avatar route (derived from image_file where possible) --
+image_file=
+HTTP/1.1 404 Not Found
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}-- logout --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- protected after logout --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}=== retained routes and removed blog ===
+-- demo endpoint --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 64
+content-type: application/json
+
+{"foobar":"phase18","message":"single direct dependency foobar"}-- order endpoint --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- order endpoint without query (route/validation) --
+HTTP/1.1 422 Unprocessable Entity
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 92
+content-type: application/json
+
+{"detail":[{"type":"missing","loc":["query","params"],"msg":"Field required","input":null}]}-- blog endpoint JSON 404 --
+HTTP/1.1 404 Not Found
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}=== SPA routes ===
+-- / --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 15:54:27 GMT
+server: uvicorn
+content-type: text/html; charset=utf-8
+accept-ranges: bytes
+content-length: 590
+last-modified: Mon, 14 Sep 2026 15:47:38 GMT
+etag: "147cd1d8de28af83a58b3b5d03237259"
+
+<!doctype html>
+<html lang="ru">
+  <head>
+-- /login --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 15:54:28 GMT
+server: uvicorn
+content-type: text/html; charset=utf-8
+accept-ranges: bytes
+content-length: 590
+last-modified: Mon, 14 Sep 2026 15:47:38 GMT
+etag: "147cd1d8de28af83a58b3b5d03237259"
+
+<!doctype html>
+<html lang="ru">
+  <head>
+-- /register --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 15:54:28 GMT
+server: uvicorn
+content-type: text/html; charset=utf-8
+accept-ranges: bytes
+content-length: 590
+last-modified: Mon, 14 Sep 2026 15:47:38 GMT
+etag: "147cd1d8de28af83a58b3b5d03237259"
+
+<!doctype html>
+<html lang="ru">
+  <head>
+-- /account --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 15:54:28 GMT
+server: uvicorn
+content-type: text/html; charset=utf-8
+accept-ranges: bytes
+content-length: 590
+last-modified: Mon, 14 Sep 2026 15:47:38 GMT
+etag: "147cd1d8de28af83a58b3b5d03237259"
+
+<!doctype html>
+<html lang="ru">
+  <head>
+-- /protected --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 15:54:28 GMT
+server: uvicorn
+content-type: text/html; charset=utf-8
+accept-ranges: bytes
+content-length: 590
+last-modified: Mon, 14 Sep 2026 15:47:38 GMT
+etag: "147cd1d8de28af83a58b3b5d03237259"
+
+<!doctype html>
+<html lang="ru">
+  <head>
+-- unknown API fallback --
+HTTP/1.1 404 Not Found
+date: Mon, 14 Sep 2026 15:54:28 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}=== filesystem/runtime cleanup checks ===
+absent_check fastapi-application/md_articles exit=0
+absent_check fastapi-application/content_art exit=0
+absent_check fastapi-application/ex_user_post exit=0
+-- runtime references --
+rg: fastapi-application: IO error for operation on fastapi-application: No such file or directory (os error 2)
+no_runtime_refs
+-- manifest dependency markers --
+rg: pyproject.toml: IO error for operation on pyproject.toml: No such file or directory (os error 2)
+=== application log files (tail) ===
+=== END PHASE 18 RAW QA RUN ===
+server_pid_to_stop=1406119
+=== ENVIRONMENT RECOVERY: ALEMBIC FROM CORRECT CWD ===
+$ cd fastapi-application && ../.venv/bin/alembic upgrade heads
+alembic_exit=0
+=== DB CHECK ===
+/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/one_simple.db
+=== AUTH FLOW RETEST AFTER ALEMBIC ===
+test_email=qa.phase18.1789401494786986546@example.com
+requested_username=qa18178940149479
+-- register --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 15:58:13 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- login --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 15:58:13 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- cookie jar --
+-- authorized me --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:58:13 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- authorized protected --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:58:13 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- account update --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:58:13 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- me after account --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:58:13 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}image_file=
+-- avatar route --
+HTTP/1.1 404 Not Found
+date: Mon, 14 Sep 2026 15:58:14 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}-- logout --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:58:14 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- protected after logout --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 15:58:14 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}=== RETAINED ENDPOINTS RETEST ===
+-- order query=id --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 15:58:14 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- app server log --
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 352, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/ex_order_product/router_order_one.py", line 116, in get_all_orders
+    await_result_execute: Result[tuple[Order]] = await db.execute(stmt)
+                                                 ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 213, in execute
+    self._adapt_connection._handle_exception(error)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 373, in _handle_exception
+    raise error
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 195, in execute
+    self.await_(_cursor.execute(operation, parameters))
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/cursor.py", line 40, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/cursor.py", line 32, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 160, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 63, in _connection_worker_thread
+    result = function()
+             ^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: orders
+[SQL: SELECT orders.id, orders.created_at, orders.promocode 
+FROM orders ORDER BY orders.id, orders.created_at]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+server2_pid_to_stop=1409759
+post_retest_processes:
+1409758 bash -c set +e ../.venv/bin/uvicorn main:main_app --host 127.0.0.1 --port 8000 >/tmp/phase18_server2.log 2>&1 & PID=$! printf 'server2_pid=%s\n' "$PID" for i in $(seq 1 30); do code=$(curl -m 1 -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/openapi.json 2>/dev/null); [ "$code" = 200 ] && break; sleep 1; done printf 'server2_ready_code=%s\n' "${code:-000}" RAW=/home/max/0_0_26_new_one/temp-auth-react-fast/tasks/current/e2e/phase18_raw.txt JAR=/tmp/phase18_cookie2.jar; rm -f "$JAR" exec >> "$RAW" 2>&1 printf '%s\n' '=== AUTH FLOW RETEST AFTER ALEMBIC ===' EMAIL="qa.phase18.$(date +%s%N)@example.com"; PASSWORD='Phase18-password-Valid'; USERNAME="qa18$(date +%s%N | cut -c1-12)" printf 'test_email=%s\nrequested_username=%s\n' "$EMAIL" "$USERNAME" printf '%s\n' '-- register --' curl -sS -i -X POST http://127.0.0.1:8000/auth/register -H 'content-type: application/json' --data "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" | sed -n '1,22p' printf '%s\n' '-- login --' curl -sS -i -c "$JAR" -X POST http://127.0.0.1:8000/auth/jwt/login -H 'content-type: application/x-www-form-urlencoded' --data-urlencode "username=$EMAIL" --data-urlencode "password=$PASSWORD" | sed -n '1,22p' printf '%s\n' '-- cookie jar --'; awk 'NF && $1 !~ /^#/ {print}' "$JAR" 2>/dev/null || true printf '%s\n' '-- authorized me --'; curl -sS -i -b "$JAR" http://127.0.0.1:8000/users/me | sed -n '1,24p' printf '%s\n' '-- authorized protected --'; curl -sS -i -b "$JAR" http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,24p' printf '%s\n' '-- account update --'; curl -sS -i -b "$JAR" -X POST http://127.0.0.1:8000/auth/account -F "username=$USERNAME" -F "email=$EMAIL" | sed -n '1,30p' printf '%s\n' '-- me after account --'; curl -sS -i -b "$JAR" http://127.0.0.1:8000/users/me | sed -n '1,24p' IMAGE_FILE=$(curl -sS -b "$JAR" http://127.0.0.1:8000/users/me | ../.venv/bin/python -c 'import json,sys; print(json.load(sys.stdin).get("image_file", ""))' 2>/dev/null) printf 'image_file=%s\n' "$IMAGE_FILE" printf '%s\n' '-- avatar route --'; if [ -n "$IMAGE_FILE" ]; then curl -sS -i "http://127.0.0.1:8000/static/profile_pics/$IMAGE_FILE" | sed -n '1,14p'; else curl -sS -i http://127.0.0.1:8000/static/profile_pics/missing.png | sed -n '1,14p'; fi printf '%s\n' '-- logout --'; curl -sS -i -b "$JAR" -X POST http://127.0.0.1:8000/auth/jwt/logout | sed -n '1,20p' printf '%s\n' '-- protected after logout --'; curl -sS -i -b "$JAR" http://127.0.0.1:8000/api/v1/auth/protected | sed -n '1,18p' printf '%s\n' '=== RETAINED ENDPOINTS RETEST ===' printf '%s\n' '-- order query=id --'; curl -sS -i 'http://127.0.0.1:8000/orders/get_all_orders?params=id' | sed -n '1,22p' printf '%s\n' '-- app server log --'; tail -n 100 /tmp/phase18_server2.log printf 'server2_pid_to_stop=%s\n' "$PID" kill "$PID" 2>/dev/null || true sleep 1 printf '%s\n' 'post_retest_processes:'; pgrep -af 'uvicorn.*main:main_app' || true
+=== POST-RETEST DATABASE AND STATIC CHECKS ===
+bash: строка 5: ../.venv/bin/python: Нет такого файла или каталога
+alembic_current=alembic_current_exit=0
+=== BUILD EVIDENCE ===
+$ cd frontend && npm run build
+
+> frontend@0.0.1 build
+> tsc && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 42 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.59 kB │ gzip:  0.41 kB
+dist/assets/index-CQGcCi6A.css    8.27 kB │ gzip:  2.59 kB
+dist/assets/index-rrxOd0nF.js   180.60 kB │ gzip: 58.86 kB
+✓ built in 2.47s
+frontend_build_exit=0
+=== NARROW BACKEND RUFF EVIDENCE ===
+$ uv run ruff check fastapi-application/auth_users/router.py fastapi-application/db_core/model_registry.py fastapi-application/main.py fastapi-application/setup_frontend.py
+All checks passed!
+narrow_ruff_exit=0
+=== FULL RUFF BASELINE EVIDENCE (KNOWN PRE-EXISTING) ===
+I001 [*] Import block is un-sorted or un-formatted
+  --> fastapi-application/api/dependencies/dep_examp_cls.py:1:1
+   |
+ 1 | / from typing import Annotated
+ 2 | |
+ 3 | | from fastapi import APIRouter, Depends
+ 4 | |
+ 5 | | from .cls_deps import (
+ 6 | |     TokenIntrospectResult,
+ 7 | |     access_required,
+ 8 | | )
+ 9 | |
+10 | | from .helper import GreatHelper, GreatService, get_great_helper
+   | |_______________________________________________________________^
+11 |
+12 |   router_dep_cls = APIRouter()
+   |
+help: Organize imports
+  |
+8 | )
+  -
+9 | from .helper import GreatHelper, GreatService, get_great_helper
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> fastapi-application/api/dependencies/helper.py:1:1
+  |
+1 | / from typing import Annotated
+2 | |
+3 | | from fastapi import Header, Depends
+  | |___________________________________^
+help: Organize imports
+  |
+2 |
+  - from fastapi import Header, Depends
+3 + from fastapi import Depends, Header
+4 |
+  |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/account.py:33:26
+   |
+31 | async def account_post(
+32 |     session: CurrentSession,
+33 |     current_user: User = Depends(active_user),
+   |                          ^^^^^^^^^^^^^^^^^^^^
+34 |     username: str = Form(""),
+35 |     email: str = Form(""),
+   |
+
+B008 Do not perform function call `File` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/account.py:36:34
+   |
+34 |     username: str = Form(""),
+35 |     email: str = Form(""),
+36 |     picture: UploadFile | None = File(None),
+   |                                  ^^^^^^^^^^
+37 | ):
+38 |     errors: dict[str, list[str]] = {}
+   |
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+  --> fastapi-application/auth_users/account.py:49:5
+   |
+47 |       elif not is_valid_email(email):
+48 |           errors.setdefault("email", []).append("Invalid email address.")
+49 | /     if username and username != current_user.username:
+50 | |         if await username_exists(session, username):
+   | |____________________________________________________^
+51 |               errors.setdefault("username", []).append(ERROR_USERNAME_TAKEN)
+52 |       if email and email != current_user.email:
+   |
+help: Combine `if` statements using `and`
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+  --> fastapi-application/auth_users/account.py:52:5
+   |
+50 |           if await username_exists(session, username):
+51 |               errors.setdefault("username", []).append(ERROR_USERNAME_TAKEN)
+52 | /     if email and email != current_user.email:
+53 | |         if await email_exists(session, email):
+   | |______________________________________________^
+54 |               errors.setdefault("email", []).append(ERROR_EMAIL_TAKEN)
+55 |       if errors:
+   |
+help: Combine `if` statements using `and`
+
+BLE001 Do not catch blind exception: `Exception`
+  --> fastapi-application/auth_users/helpers.py:34:12
+   |
+32 |         EmailStr._validate(email)  # type: ignore[attr-defined]
+33 |         return True
+34 |     except Exception:
+   |            ^^^^^^^^^
+35 |         return False
+   |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/user_manager.py:95:39
+   |
+94 | async def get_user_manager(
+95 |     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
+   |                                       ^^^^^^^^^^^^^^^^^^^^
+96 | ) -> AsyncGenerator[UserManager, None]:
+97 |     """DI: UserManager, получающий user_db из get_user_db."""
+   |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/ex_order_product/router_order_one.py:59:75
+   |
+57 | # ==================================================================== #
+58 | @r_order_one.get("/get_order_filter_by", response_model=OrderResp)
+59 | async def get_order_filter_by(db: CurrentSession, params: OrderGetQuery = Depends()):
+   |                                                                           ^^^^^^^^^
+60 |     # stmt: Select[tuple[Order]] = select(Order).filter_by(id=22)
+61 |     filter_where = {key: value for key, value in params.model_dump().items() if value is not None}
+   |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/ex_order_product/router_order_one.py:78:71
+   |
+77 | @r_order_one.get("/get_order_where", response_model=OrderResp | list[OrderResp])
+78 | async def get_order_where(db: CurrentSession, params: OrderGetQuery = Depends()):
+   |                                                                       ^^^^^^^^^
+79 |     # stmt = select(Order).where(Order.id == 22)
+80 |     filter_where = [
+   |
+
+Found 10 errors.
+[*] 2 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).
+full_ruff_exit=1
+=== FILESYSTEM AND DEPENDENCY EVIDENCE ===
+absent=fastapi-application/md_articles
+absent=fastapi-application/content_art
+absent=fastapi-application/ex_user_post
+-- runtime refs --
+fastapi-application/auth_users/__init__.py:17:md_articles → setup_frontend → api_blog → auth_users (нас самих), что
+fastapi-application/auth_users/account.py:5:username/email, ресайз аватара, единый 422-формат ошибок). Отличие от md_articles
+fastapi-application/auth_users/models.py:9:md_articles/models.py::BlogUser; переиспользуемые Annotated-типы колонок
+fastapi-application/auth_users/helpers.py:4:Перенесено из md_articles/helpers_auth.py (фаза 1 — пока используется параллельно
+fastapi-application/auth_users/helpers.py:53:    Логика 1:1 с md_articles/helpers_auth.py::save_picture, но путь выражен
+-- pyproject dependencies --
+20:    "python-multipart>=0.0.18",
+21:    "pyyaml>=6.0.2",
+22:    "fastapi-users[sqlalchemy]>=14.0.1",
+23:    "pillow>=11.0.0",
+-- frontend forbidden markers --
+frontend/src/pages/LoginPage.tsx:1:// Страница входа: форма (email, password), POST /api/blog/login.
+frontend/src/components/Toast.tsx:1:// Тост-уведомления: message + category из ответов /api/blog
+-- tracked/untracked relevant status --
+ M fastapi-application/auth_users/router.py
+ D fastapi-application/content_art/.gitkeep
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/aion-zcode-1.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/anion-gemini.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/anion-gpt-1.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/anion-gpt-2.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/claude_stream_py.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/deepseek-r1-fastapi-1.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/first-arena-high5-fastapi-1.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/gem-deep-instal-windsurf-1.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/gpt5-deep-instal-windsurf-1.md"
+ D "fastapi-application/content_art/AI \320\270\320\275\321\201\321\202\321\200\321\203\320\274\320\265\320\275\321\202\321\213/gpt5-deep-instal-windsurf-2.md"
+ D "fastapi-application/content_art/Fast API/FastAPI_CodeReview.docx.md"
+ D "fastapi-application/content_art/Fast API/agent_mode_review.md"
+ D "fastapi-application/content_art/Fast API/gem-deep-windsurf-1.md"
+ D "fastapi-application/content_art/Fast API/gemini-pro-fastapi-1.md"
+ D "fastapi-application/content_art/Fast API/gigachat-fastapi-1.md"
+ D "fastapi-application/content_art/Fast API/grok-eks-fastapi-1.md"
+ D "fastapi-application/content_art/Guide FastAPI/gemPro-book1-g.md"
+ D "fastapi-application/content_art/Guide FastAPI/gemPro-book1-s.md"
+ D "fastapi-application/content_art/Guide FastAPI/\320\220\321\200\321\205\320\270\321\202\320\265\320\272\321\202\321\203\321\200\320\260 FastAPI \320\270 React.md"
+ D "fastapi-application/content_art/Guide FastAPI/\320\241\320\276\320\262\321\200\320\265\320\274\320\265\320\275\320\275\320\276\320\265 \320\273\320\276\320\263\320\270\321\200\320\276\320\262\320\260\320\275\320\270\320\265 \320\262 Python \320\264\320\273\321\217 FastAPI.md"
+ D "fastapi-application/content_art/Guide MCP Python/python_advanced_book.md"
+ D "fastapi-application/content_art/Guide MCP Python/\320\230\320\275\321\202\320\265\320\263\321\200\320\260\321\206\320\270\321\217 Puppeteer MCP \320\262 Qwen Code.md"
+ D "fastapi-application/content_art/Guide MCP Python/\320\232\320\276\320\275\321\204\320\270\320\263\321\203\321\200\320\260\321\206\320\270\321\217 MCP-\321\201\320\265\321\200\320\262\320\265\321\200\320\276\320\262 \320\264\320\273\321\217 \321\201\321\203\320\261\320\260\320\263\320\265\320\275\321\202\320\276\320\262 Qwen Code.md"
+ D "fastapi-application/content_art/Guide MCP Python/\320\234\320\260\320\263\320\270\321\217 PEP 723_ \320\220\320\262\321\202\320\276\320\275\320\276\320\274\320\275\321\213\320\265 Python-\321\201\320\272\321\200\320\270\320\277\321\202\321\213 \321\207\320\265\321\200\320\265\320\267 uv run (1).md"
+ D "fastapi-application/content_art/Guide MCP Python/\320\234\320\260\320\263\320\270\321\217 PEP 723_ \320\220\320\262\321\202\320\276\320\275\320\276\320\274\320\275\321\213\320\265 Python-\321\201\320\272\321\200\320\270\320\277\321\202\321\213 \321\207\320\265\321\200\320\265\320\267 uv run.md"
+ D "fastapi-application/content_art/Guide MCP Python/\320\240\321\203\320\272\320\276\320\262\320\276\320\264\321\201\321\202\320\262\320\276 \320\277\320\276 \320\275\320\260\321\201\321\202\321\200\320\276\320\271\320\272\320\265 MCP-\321\201\320\265\321\200\320\262\320\265\321\200\320\276\320\262 \320\262 Qwen Code.md"
+ D "fastapi-application/content_art/Guide my fastApi/01-architecture-overview.md"
+ D "fastapi-application/content_art/Guide my fastApi/02-fastapi-backend.md"
+ D "fastapi-application/content_art/Guide my fastApi/03-database-layer.md"
+ D "fastapi-application/content_art/Guide my fastApi/04-json-api-contract.md"
+ D "fastapi-application/content_art/Guide my fastApi/05-react-frontend.md"
+ D "fastapi-application/content_art/Guide my fastApi/06-integration-deploy.md"
+ D "fastapi-application/content_art/Guide my fastApi/07-alternatives.md"
+ D "fastapi-application/content_art/Guide my fastApi/08-checklist-new-project.md"
+ D "fastapi-application/content_art/Guide my fastApi/README.md"
+ D "fastapi-application/content_art/Jinja Templates/SOCKS5 \320\277\321\200\320\276\320\272\321\201\320\270 \321\207\320\265\321\200\320\265\320\267 asyncssh_.md"
+ D "fastapi-application/content_art/Jinja Templates/SOCKS5 \321\207\320\265\321\200\320\265\320\267 sshtunnel_ \321\200\321\203\320\272\320\276\320\262\320\276\320\264\321\201\321\202\320\262\320\276_.md"
+ D "fastapi-application/content_art/Jinja Templates/gemini-pro-fastapi-1.md"
+ D "fastapi-application/content_art/Jinja Templates/qwen3-coder-fastapi-1.md"
+ D "fastapi-application/content_art/Jinja Templates/qwen3-deep-instal-windsurf-1.md"
+ D "fastapi-application/content_art/Jinja Templates/sonet-fastapi-1.md"
+ D "fastapi-application/content_art/Jinja Templates/sonet-instal-windsurf-1.md"
+ D "fastapi-application/content_art/Jinja Templates/sonet-instal-windsurf-2.md"
+ D "fastapi-application/content_art/Pydantic Python/gemPro-book1-g.md"
+ D "fastapi-application/content_art/Pydantic Python/sonet-oauth2-simple-pr.md"
+ D "fastapi-application/content_art/Pydantic Python/sonet-oauth2-super-promt.md"
+ D "fastapi-application/content_art/Pydantic Python/sonet-oauth2_practice.md"
+ D "fastapi-application/content_art/Pydantic Python/test.md.md"
+ D "fastapi-application/content_art/Pydantic Python/\320\220\320\273\321\214\321\202\320\265\321\200\320\275\320\260\321\202\320\270\320\262\321\213 asyncssh \320\264\320\273\321\217 SOCKS-\320\277\321\200\320\276\320\272\321\201\320\270_.md"
+ D "fastapi-application/content_art/Pydantic Python/\320\237\320\260\321\200\320\260\320\273\320\273\320\265\320\273\320\270\320\267\320\274 \320\270 \320\274\320\275\320\276\320\263\320\276\320\267\320\260\320\264\320\260\321\207\320\275\320\276\321\201\321\202\321\214 Python_.md"
+ D "fastapi-application/content_art/Pydantic Python/\320\243\321\201\321\202\320\260\320\275\320\276\320\262\320\272\320\260 \320\270 \320\270\321\201\320\277\320\276\320\273\321\214\320\267\320\276\320\262\320\260\320\275\320\270\320\265 WinSurf Python_.md"
+ D fastapi-application/content_art/Python/01_project_structure.md
+ D fastapi-application/content_art/Python/02_architecture.md
+ D fastapi-application/content_art/Python/03_execution_flow.md
+ D fastapi-application/content_art/Python/04_code_quality.md
+ D fastapi-application/content_art/Python/05_optimization_roadmap.md
+ D fastapi-application/content_art/Python/06_frontend_guide.md
+ D fastapi-application/content_art/Python/07_frontend_project_report.md
+ D fastapi-application/content_art/Python/08_ai_application_report.md
+ D fastapi-application/content_art/Python/09_ai_code_examples.md
+ D fastapi-application/content_art/Python/10_models_and_providers.md
+ D fastapi-application/content_art/Rust/05_ai_agent_guide.md
+ D fastapi-application/content_art/Rust/06_frontend_bootstrap_analysis.md
+ D fastapi-application/content_art/Rust/06_frontend_report.md
+ D fastapi-application/content_art/Rust/07_authorization_report.md
+ D fastapi-application/content_art/Rust/configuration.md
+ D fastapi-application/content_art/Rust/report_database_sqlalchemy_async_alembic.md
+ D fastapi-application/content_art/Rust/static-site-generation.md
+ D fastapi-application/content_art/Rust/writing-posts.md
+ D "fastapi-application/content_art/Sql Alchemy/05_tailwind_cdn_vs_production.md"
+ D "fastapi-application/content_art/Sql Alchemy/AGENTS.md"
+ D "fastapi-application/content_art/Sql Alchemy/QWEN.ru.md"
+ D "fastapi-application/content_art/Sql Alchemy/README.md"
+ D "fastapi-application/content_art/Sql Alchemy/REQUIREMENTS.ru.md"
+ D "fastapi-application/content_art/Sql Alchemy/adversary.ru.md"
+ D "fastapi-application/content_art/Sql Alchemy/backend-dev.ru.md"
+ D "fastapi-application/content_art/Sql Alchemy/codex-onefast-review.md"
+ D "fastapi-application/content_art/Sql Alchemy/frontend-dev.ru.md"
+ D "fastapi-application/content_art/Sql Alchemy/orchestrator.ru.md"
+ D "fastapi-application/content_art/Sql Alchemy/qa.ru.md"
+ M fastapi-application/db_core/model_registry.py
+ M fastapi-application/main.py
+ D fastapi-application/md_articles/__init__.py
+ D fastapi-application/md_articles/api_blog.py
+ D fastapi-application/md_articles/articles.yaml
+ D fastapi-application/md_articles/models.py
+ D fastapi-application/md_articles/schema_art.py
+ D fastapi-application/md_articles/schema_blog.py
+ D fastapi-application/md_articles/setup_frontend.py
+ D frontend/components/Toast.tsx
+ M frontend/index.html
+ M frontend/src/App.tsx
+ D frontend/src/api/artManage.ts
+ D frontend/src/api/blog.ts
+D  frontend/src/components/ArtManageForms.tsx
+ D frontend/src/components/ArticleCard.tsx
+ M frontend/src/components/Header.tsx
+ D frontend/src/components/HljsThemeSelect.tsx
+ M frontend/src/components/Layout.tsx
+D  frontend/src/components/MarkdownContent.tsx
+D  frontend/src/components/Pagination.tsx
+ D frontend/src/components/SectionMenu.tsx
+ D frontend/src/components/SidePanel.tsx
+ D frontend/src/components/ThemeSelect.tsx
+ M frontend/src/context/AuthContext.tsx
+ D frontend/src/hooks/useHljsTheme.ts
+ D frontend/src/hooks/useTheme.ts
+ M frontend/src/index.css
+ D frontend/src/pages/AboutPage.tsx
+ M frontend/src/pages/AccountPage.tsx
+ D frontend/src/pages/ArtManagePage.tsx
+ D frontend/src/pages/ArticlePage.tsx
+ M frontend/src/pages/HomePage.tsx
+ M frontend/src/pages/RegisterPage.tsx
+ M frontend/src/types.ts
+?? fastapi-application/setup_frontend.py
+?? frontend/src/pages/ProtectedPage.tsx
+?? tasks/current/e2e/
+=== END SUPPLEMENTAL EVIDENCE ===
+=== FINAL CLEAN BEHAVIOR RUN (MIGRATED SQLITE) ===
+ready_code=200
+-- anonymous protected --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}test_email=qa.phase18.1789402013564764482@example.com
+requested_username=qa18178940201357
+-- register --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- login --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- me --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- protected authorized --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- account --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- me updated --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}image_file=
+-- avatar static --
+HTTP/1.1 404 Not Found
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}-- logout --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- protected post logout --
+HTTP/1.1 401 Unauthorized
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}-- demo --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 64
+content-type: application/json
+
+{"foobar":"phase18","message":"single direct dependency foobar"}-- order --
+HTTP/1.1 500 Internal Server Error
+date: Mon, 14 Sep 2026 16:06:52 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error-- blog 404 --
+HTTP/1.1 404 Not Found
+date: Mon, 14 Sep 2026 16:06:53 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}-- SPA protected --
+HTTP/1.1 200 OK
+date: Mon, 14 Sep 2026 16:06:53 GMT
+server: uvicorn
+content-type: text/html; charset=utf-8
+accept-ranges: bytes
+content-length: 590
+last-modified: Mon, 14 Sep 2026 16:05:58 GMT
+etag: "30719209ade74f646460dd013a710d54"
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-- api fallback --
+HTTP/1.1 404 Not Found
+date: Mon, 14 Sep 2026 16:06:53 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}-- app log requests --
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 352, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/ex_order_product/router_order_one.py", line 116, in get_all_orders
+    await_result_execute: Result[tuple[Order]] = await db.execute(stmt)
+                                                 ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 213, in execute
+    self._adapt_connection._handle_exception(error)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 373, in _handle_exception
+    raise error
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 195, in execute
+    self.await_(_cursor.execute(operation, parameters))
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/cursor.py", line 40, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/cursor.py", line 32, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 160, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 63, in _connection_worker_thread
+    result = function()
+             ^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: orders
+[SQL: SELECT orders.id, orders.created_at, orders.promocode 
+FROM orders ORDER BY orders.id, orders.created_at]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:45696 - "GET /api/blog/articles HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45700 - "GET /protected HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45708 - "GET /api/nope HTTP/1.1" 404 Not Found
+server3_pid_to_stop=1413490
+=== MIGRATION VERIFICATION FROM REPO ROOT ===
+bash: строка 5: ../.venv/bin/python: Нет такого файла или каталога
+=== MIGRATION VERIFICATION FROM APPLICATION CWD ===
+tables [('alembic_version',)]
+=== ALEMBIC CURRENT ===
+=== WHY TABLES WERE ABSENT: ALEMBIC RAW LOG ===
+=== FINAL ENVIRONMENT CHECK ===
+-- alembic versions directory --
+итого 8
+drwxrwxr-x 2 max max 4096 сен 14 14:11 .
+drwxrwxr-x 4 max max 4096 сен 14 18:56 ..
+-rw-rw-r-- 1 max max    0 сен 14 09:39 .keep
+-- database files --
+-rw-r--r-- 1 max max 12288 сен 14 18:56 fastapi-application/one_simple.db
+-- process --
+1414137 bash -c set +e RAW=tasks/current/e2e/phase18_raw.txt { printf '%s\n' '=== FINAL ENVIRONMENT CHECK ===' printf '%s\n' '-- alembic versions directory --'; ls -la fastapi-application/alembic/versions printf '%s\n' '-- database files --'; ls -l fastapi-application/*.db 2>&1 printf '%s\n' '-- process --'; pgrep -af 'uvicorn.*main:main_app' || true printf '%s\n' '-- port --'; curl -m 2 -sS -o /dev/null -w 'openapi_after_stop_http=%{http_code}\n' http://127.0.0.1:8000/openapi.json || true printf '%s\n' '-- relevant application log tail --'; tail -n 35 /tmp/phase18_server3.log 2>&1 } >> "$RAW" 2>&1 printf '%s\n' 'final environment evidence appended'
+-- port --
+curl: (7) Failed to connect to 127.0.0.1 port 8000 after 0 ms: В соединении отказано
+openapi_after_stop_http=000
+-- relevant application log tail --
+    cursor.execute(statement, parameters)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 213, in execute
+    self._adapt_connection._handle_exception(error)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 373, in _handle_exception
+    raise error
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 195, in execute
+    self.await_(_cursor.execute(operation, parameters))
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/cursor.py", line 40, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/cursor.py", line 32, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 160, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 63, in _connection_worker_thread
+    result = function()
+             ^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: orders
+[SQL: SELECT orders.id, orders.created_at, orders.promocode 
+FROM orders ORDER BY orders.id, orders.created_at]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:45696 - "GET /api/blog/articles HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45700 - "GET /protected HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45708 - "GET /api/nope HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1413490]

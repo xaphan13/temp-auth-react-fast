@@ -1,0 +1,2 @@
+absence=pass
+diff_check_exit=0

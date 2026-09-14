@@ -1,0 +1,8 @@
+temporary SQLite reset: PASS
+tables after first upgrade: ['alembic_version', 'order_product_association', 'orders', 'products', 'user']
+revision: [('69cac9b8a3e7',)]
+SQL inspection: PASS
+tables after repeat upgrade: ['alembic_version', 'order_product_association', 'orders', 'products', 'user']
+repeat upgrade idempotence: PASS
+main_app import: PASS 10
+exit=0

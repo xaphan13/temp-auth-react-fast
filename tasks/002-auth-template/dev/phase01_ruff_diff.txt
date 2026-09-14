@@ -1,0 +1,12 @@
+--- fastapi-application/setup_frontend.py
++++ fastapi-application/setup_frontend.py
+@@ -5,7 +5,6 @@
+ from fastapi.staticfiles import StaticFiles
+ from starlette.routing import Route
+ 
+-
+ FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
+ ASSETS_DIR = FRONTEND_DIST / "assets"
+ INDEX_HTML = FRONTEND_DIST / "index.html"
+
+Would fix 1 error.

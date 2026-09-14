@@ -1,0 +1,136 @@
+# Phase 19: migration diagnosis
+
+Дата: 2026-09-14
+Режим: диагностика только; product code, `DEFECTS.md` и migration files не изменялись.
+Runtime DB не использовалась: проверка upgrade выполнена с `APP__DB__URL=sqlite+aiosqlite:////tmp/phase19_isolated.db`.
+
+## Текущая рабочая копия
+
+Команда из `fastapi-application/`:
+
+```text
+../.venv/bin/alembic heads
+../.venv/bin/alembic history
+../.venv/bin/alembic current
+../.venv/bin/alembic upgrade heads --sql
+```
+
+Результат всех четырёх команд: пустой вывод и exit 0. В текущем дереве каталога
+`fastapi-application/alembic/versions/` есть только `.keep`; Python revisions отсутствуют.
+
+Изолированная проверка:
+
+```text
+APP__DB__URL=sqlite+aiosqlite:////tmp/phase19_isolated.db ../.venv/bin/alembic upgrade heads
+exit=0
+APP__DB__URL=sqlite+aiosqlite:////tmp/phase19_isolated.db ../.venv/bin/alembic current
+exit=0
+sqlite tables: [('alembic_version',)]
+```
+
+Причина DEF-001/DEF-002: `alembic upgrade heads` исполняет только найденные revision
+scripts. При пустом `alembic/versions` у Alembic нет head и нет upgrade operations, поэтому
+создаётся служебная `alembic_version`, но не таблицы из SQLAlchemy metadata. `target_metadata`
+в `fastapi-application/alembic/env.py` используется для `revision --autogenerate`, а не для
+создания таблиц командой `upgrade`.
+
+## Текущая metadata и DB URL
+
+`fastapi-application/alembic/env.py` импортирует `Base` и вызывает
+`load_model_registry()`, затем устанавливает `target_metadata = Base.metadata`; URL
+переопределяется из `settings.db.url`.
+
+`fastapi-application/db_core/model_registry.py` регистрирует ровно:
+
+```text
+['order_product_association', 'orders', 'products', 'user']
+```
+
+Колонки подтверждены текущим импортом:
+
+```text
+user: ['created_at', 'email', 'hashed_password', 'id', 'image_file', 'is_active', 'is_superuser', 'is_verified', 'username']
+orders: ['created_at', 'id', 'promocode']
+products: ['description', 'id', 'name', 'price']
+order_product_association: ['count', 'id', 'order_id', 'product_id', 'unit_price']
+```
+
+`fastapi-application/auth_users/models.py` задаёт `User.__tablename__ = "user"` и
+наследует стандартные fastapi-users UUID/email/password/status поля; дополнительные
+поля: nullable `username`, `image_file` с default `default.jpg`, `created_at`.
+
+`fastapi-application/ex_order_product/model_order_product.py` задаёт таблицы `orders`,
+`products`, `order_product_association`; association ссылается на `orders.id` и
+`products.id`, содержит cascade foreign keys и unique `(order_id, product_id)`.
+
+`fastapi-application/core/config.py` читает env-файлы в порядке
+`prod_db.env`, `dev_sqlite.env`, `.env`, с `env_prefix="APP__"` и nested delimiter
+`"__"`. Текущий dev URL из `fastapi-application/dev_sqlite.env`:
+
+```text
+APP__DB__URL=sqlite+aiosqlite:///./one_simple.db
+```
+
+В диагностике override успешно разрешился как
+`sqlite+aiosqlite:////tmp/phase19_config.db`. Конфигурация сама по себе не объясняет
+отсутствие таблиц; причина в отсутствии revision scripts.
+
+## Git history и точные refs
+
+Текущие refs:
+
+```text
+HEAD / case-auth: 7e228c7b4ed8ee8c0559c8d8edc9ddaf50deb217
+HEAD^:          dc7f27aa9c8eda8bb439854ca207ee88bdb3f38f
+fastuser-jwt:   dc7f27aa9c8eda8bb439854ca207ee88bdb3f38f
+last complete:  5f69a5da780c5cd18743e56748ad605e1d45eeb9
+```
+
+`HEAD` (task commit `7e228c7`, `new task temp auth not blog`) не меняет
+`fastapi-application/alembic/versions`; `git diff HEAD^ HEAD -- ...` пуст. В `HEAD` и
+`HEAD^` в каталоге есть только `.keep`. Следовательно, текущая ветка `case-auth` не
+удаляла revisions своим task-коммитом: она унаследовала уже пустой каталог от
+`dc7f27a`.
+
+Ранее revisions существовали:
+
+- `5f69a5d` содержал четыре scripts: `59bdab4b2e7c` (`user_post`), `35ae229e79dd`
+  (`order_product`), `b59cbdf15878` (`md_articles_blog_user_post`) и `f4c23f4a9c06`
+  (`add_auth_users_user_table`).
+- `b8c2416847fe478b07e4e06e29ca312e40f8368c` (`alembic update`) удалил эти четыре
+  scripts и добавил единый `2026-09-13_19-06--5fed75984f99--initial.py`.
+- `d2a4e732b652aabf9c290aaf9cad68b66df05edf` изменил этот единый script.
+- `70195c57f14345ed54ed5b7fa0bfea466e73070` (`fix alembic`) переименовал его в
+  `2026-09-13_22-34--caf2fea11a9d--initial.py` (revision `caf2fea11a9d`). Этот единый
+  script создавал `blog_user`, `blog_post`, `user`, `orders`, `products` и
+  `order_product_association`; `down_revision = None`.
+- `dc7f27aa9c8eda8bb439854ca207ee88bdb3f38f` (`refactoring dep ex`) удалил
+  `2026-09-13_22-34--caf2fea11a9d--initial.py`.
+
+Таким образом, auth/order revisions действительно были в родительской истории, но были
+удалены до точки ответвления `case-auth`: первоначально отдельные auth/order revisions
+удалил `b8c2416`, затем последний объединённый revision удалил `dc7f27a`. В текущей ветке
+нет revision deletion diff относительно `dc7f27a`.
+
+Исторические auth/order semantics:
+
+```text
+59bdab4b2e7c: down_revision = None; создаёт старые ex_user_post users/posts
+35ae229e79dd: down_revision = 59bdab4b2e7c; создаёт orders/products/association
+b59cbdf15878: down_revision = 35ae229e79dd; создаёт blog_user/blog_post
+f4c23f4a9c06: down_revision = b59cbdf15878; создаёт текущую auth user
+```
+
+Прямое восстановление всей старой цепочки не является минимальным для текущего шаблона:
+она тянет ex_user_post и blog tables, а файл `caf2fea11a9d` также содержит blog tables.
+
+## Рекомендация оркестратору
+
+Не восстанавливать старые chain scripts и не добавлять blog cleanup migration. Следующим
+узким backend-шагом штатно создать и закоммитить одну новую initial revision через
+`alembic revision --autogenerate -m ...` из текущей `Base.metadata`/registry, затем на
+чистой диагностической БД выполнить `alembic upgrade heads`. Такая revision должна
+создавать только текущие четыре metadata tables: `user`, `orders`, `products`,
+`order_product_association`; это восстанавливает auth/order flow без runtime DB, без blog
+migration cleanup и без изменения текущих auth/order semantics. В этой диагностике revision
+не создавалась.

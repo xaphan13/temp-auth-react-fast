@@ -1,0 +1,132 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> fastapi-application/api/dependencies/dep_examp_cls.py:1:1
+   |
+ 1 | / from typing import Annotated
+ 2 | |
+ 3 | | from fastapi import APIRouter, Depends
+ 4 | |
+ 5 | | from .cls_deps import (
+ 6 | |     TokenIntrospectResult,
+ 7 | |     access_required,
+ 8 | | )
+ 9 | |
+10 | | from .helper import GreatHelper, GreatService, get_great_helper
+   | |_______________________________________________________________^
+11 |
+12 |   router_dep_cls = APIRouter()
+   |
+help: Organize imports
+  |
+8 | )
+  -
+9 | from .helper import GreatHelper, GreatService, get_great_helper
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> fastapi-application/api/dependencies/helper.py:1:1
+  |
+1 | / from typing import Annotated
+2 | |
+3 | | from fastapi import Header, Depends
+  | |___________________________________^
+help: Organize imports
+  |
+2 |
+  - from fastapi import Header, Depends
+3 + from fastapi import Depends, Header
+4 |
+  |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/account.py:33:26
+   |
+31 | async def account_post(
+32 |     session: CurrentSession,
+33 |     current_user: User = Depends(active_user),
+   |                          ^^^^^^^^^^^^^^^^^^^^
+34 |     username: str = Form(""),
+35 |     email: str = Form(""),
+   |
+
+B008 Do not perform function call `File` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/account.py:36:34
+   |
+34 |     username: str = Form(""),
+35 |     email: str = Form(""),
+36 |     picture: UploadFile | None = File(None),
+   |                                  ^^^^^^^^^^
+37 | ):
+38 |     errors: dict[str, list[str]] = {}
+   |
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+  --> fastapi-application/auth_users/account.py:49:5
+   |
+47 |       elif not is_valid_email(email):
+48 |           errors.setdefault("email", []).append("Invalid email address.")
+49 | /     if username and username != current_user.username:
+50 | |         if await username_exists(session, username):
+   | |____________________________________________________^
+51 |               errors.setdefault("username", []).append(ERROR_USERNAME_TAKEN)
+52 |       if email and email != current_user.email:
+   |
+help: Combine `if` statements using `and`
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+  --> fastapi-application/auth_users/account.py:52:5
+   |
+50 |           if await username_exists(session, username):
+51 |               errors.setdefault("username", []).append(ERROR_USERNAME_TAKEN)
+52 | /     if email and email != current_user.email:
+53 | |         if await email_exists(session, email):
+   | |______________________________________________^
+54 |               errors.setdefault("email", []).append(ERROR_EMAIL_TAKEN)
+55 |       if errors:
+   |
+help: Combine `if` statements using `and`
+
+BLE001 Do not catch blind exception: `Exception`
+  --> fastapi-application/auth_users/helpers.py:34:12
+   |
+32 |         EmailStr._validate(email)  # type: ignore[attr-defined]
+33 |         return True
+34 |     except Exception:
+   |            ^^^^^^^^^
+35 |         return False
+   |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/auth_users/user_manager.py:95:39
+   |
+94 | async def get_user_manager(
+95 |     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
+   |                                       ^^^^^^^^^^^^^^^^^^^^
+96 | ) -> AsyncGenerator[UserManager, None]:
+97 |     """DI: UserManager, получающий user_db из get_user_db."""
+   |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/ex_order_product/router_order_one.py:59:75
+   |
+57 | # ==================================================================== #
+58 | @r_order_one.get("/get_order_filter_by", response_model=OrderResp)
+59 | async def get_order_filter_by(db: CurrentSession, params: OrderGetQuery = Depends()):
+   |                                                                           ^^^^^^^^^
+60 |     # stmt: Select[tuple[Order]] = select(Order).filter_by(id=22)
+61 |     filter_where = {key: value for key, value in params.model_dump().items() if value is not None}
+   |
+
+B008 Do not perform function call `Depends` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> fastapi-application/ex_order_product/router_order_one.py:78:71
+   |
+77 | @r_order_one.get("/get_order_where", response_model=OrderResp | list[OrderResp])
+78 | async def get_order_where(db: CurrentSession, params: OrderGetQuery = Depends()):
+   |                                                                       ^^^^^^^^^
+79 |     # stmt = select(Order).where(Order.id == 22)
+80 |     filter_where = [
+   |
+
+Found 10 errors.
+[*] 2 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).
+
+exit_code=1

@@ -1,0 +1,3 @@
+PASS: content_art absent
+PASS: ex_user_post absent
+PASS: static/profile_pics preserved

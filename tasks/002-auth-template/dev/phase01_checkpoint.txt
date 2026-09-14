@@ -1,0 +1,6 @@
+23
+True
+False
+False
+True
+['/api/v1/auth/protected', '/api/v1/dep_examples/direct-cls-dependency', '/api/v1/dep_examples/great-service-as-dependency', '/api/v1/dep_examples/helper-as-dependency', '/api/v1/dep_examples/multi-direct-and-via-func', '/api/v1/dep_examples/multi-indirect', '/api/v1/dep_examples/single-direct-dependency', '/api/v1/dep_examples/single-via-func', '/api/v1/depends_class_annotated/my_items/{item_id}', '/api/v1/depends_function_annotated/my_items/{item_id}', '/api/v1/fastapi_class_annotated/my_items/{item_id}', '/api/v1/fastapi_class_old/my_items/{item_id}', '/auth/account', '/auth/jwt/login', '/auth/jwt/logout', '/auth/register', '/orders/add_order', '/orders/get_all_join', '/orders/get_all_orders', '/orders/get_order_filter_by', '/orders/get_order_where', '/orders/insert_order', '/users/me']

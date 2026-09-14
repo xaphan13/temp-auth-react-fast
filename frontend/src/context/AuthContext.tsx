@@ -1,5 +1,5 @@
 // Контекст текущего пользователя: инициализация через
-// GET /api/blog/current_user, обновление после login/account,
+// GET /users/me, обновление после login/account,
 // сброс после logout (см. api/auth.ts).
 
 import {

@@ -1,0 +1,2 @@
+Runtime references: none (checked 29 Python source files)
+Historical matches in auth docstrings are excluded from runtime-reference result.

@@ -1,0 +1,9 @@
+Generating /home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/alembic/versions/2026-09-14_19-28--69cac9b8a3e7--initial_auth_order_schema.py ...  done
+Running post write hook 'black' ...
+Warning: Python 3.12 cannot parse code formatted for Python 3.15. To fix this: run Black with Python 3.15, set --target-version to py312, or use --fast to skip the safety check. Black's safety check verifies equivalence by parsing the AST, which fails when the running Python is older than the target version.
+reformatted /home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/alembic/versions/2026-09-14_19-28--69cac9b8a3e7--initial_auth_order_schema.py
+
+All done! ✨ 🍰 ✨
+1 file reformatted.
+  done
+exit=0

@@ -50,7 +50,6 @@ class ApiV1Prefix(BaseModel):
 class ApiPrefix(BaseModel):
     prefix: str = "/api"
     v1: ApiV1Prefix = ApiV1Prefix()
-    user_post_prefix: str = "/users"
     order_product_prefix: str = "/orders"
 
 

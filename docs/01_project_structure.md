@@ -9,7 +9,7 @@
 - `fastapi-application/db_core/` — SQLAlchemy 2.0 async, общая `Base`, сессии и типы колонок.
 - `fastapi-application/auth_users/` — текущая авторизация на `fastapi-users`, аккаунт и avatar flow.
 - `fastapi-application/static/profile_pics/` — аватары пользователей.
-- `fastapi-application/setup_frontend.py` — mounts для avatar static, frontend assets и SPA fallback.
+- `../fastapi-application/core/setup_frontend.py` — mounts для avatar static, frontend assets и SPA fallback.
 - `frontend/` — минимальное React-приложение auth-шаблона и клиентские API-обёртки.
 - `fastapi-application/alembic/` — асинхронные миграции.
 - `docs/` — актуальная техническая документация.

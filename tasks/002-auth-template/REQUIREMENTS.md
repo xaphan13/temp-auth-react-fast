@@ -4,7 +4,7 @@
 
 Архитектурная граница задания: bounded context — учебный auth-шаблон поверх существующего FastAPI-приложения. Внутри границы находятся `auth_users`, пользовательская модель и avatar static, auth-интеграция приложения, минимальный SPA и его API-клиент. Вне границы остаются `api/`, `ex_order_product/`, общая инфраструктура БД/FastAPI/Alembic и их существующие демонстрационные маршруты. `ex_user_post/` удаляется вместе с blog-кодом как лишний домен.
 
-Существующая blog-связка объединяет auth и blog через `md_articles/setup_frontend.py`; после удаления блога generic-раздача SPA переносится в новый `fastapi-application/setup_frontend.py`. Это минимальная необходимая абстракция: без неё `main.py` либо сохранит ложную зависимость от `md_articles`, либо будет одновременно отвечать за auth-router, static mounts и SPA fallback.
+Существующая blog-связка объединяет auth и blog через `md_articles/setup_frontend.py`; после удаления блога generic-раздача SPA переносится в новый `../../fastapi-application/core/setup_frontend.py`. Это минимальная необходимая абстракция: без неё `main.py` либо сохранит ложную зависимость от `md_articles`, либо будет одновременно отвечать за auth-router, static mounts и SPA fallback.
 
 ## Подтверждённые решения
 
@@ -32,7 +32,7 @@
 - `fastapi-application/api/` без изменений поведения.
 - `fastapi-application/ex_order_product/` без изменений поведения.
 - Общие `db_core/`, `core/`, `create_fastapi.py`, `utils/docs.py`, Alembic и текущая SQLite/PostgreSQL конфигурация.
-- Новый `fastapi-application/setup_frontend.py` с публичной функцией `mount_frontend(app: FastAPI) -> None`. Функция монтирует `/static` из `BASE_DIR / "static"`, `/assets` из `frontend/dist/assets` и последним добавляет `/{full_path:path}`; для `/api` и `/api/*` fallback возвращает JSON 404, для остальных путей — `frontend/dist/index.html`, если сборка существует.
+- Новый `../../fastapi-application/core/setup_frontend.py` с публичной функцией `mount_frontend(app: FastAPI) -> None`. Функция монтирует `/static` из `BASE_DIR / "static"`, `/assets` из `frontend/dist/assets` и последним добавляет `/{full_path:path}`; для `/api` и `/api/*` fallback возвращает JSON 404, для остальных путей — `frontend/dist/index.html`, если сборка существует.
 - `fastapi-application/main.py`, который подключает `router_api`, `r_order_one`, `auth_users.router` и `mount_frontend`, не импортируя `md_articles` или `ex_user_post`.
 - Защищённый `GET /api/v1/auth/protected`, использующий `active_user` и возвращающий JSON с подтверждением доступа и auth-данными пользователя; anonymous получает JSON `401`.
 - `db_core/model_registry.py` без `BlogUser`/`BlogPost`, но с auth `User` и сохранёнными order/product-моделями, чтобы metadata для auth и order domain оставалась доступной.
@@ -87,7 +87,7 @@
 
 | # | Фаза | Исполнитель | Файлы | Контракт | Checkpoint | Бюджет ходов |
 |---|---|---|---|---|---|---|
-| 1 | Развязать приложение от блога и добавить protected API | backend-dev | `fastapi-application/main.py`, новый `fastapi-application/setup_frontend.py`, `fastapi-application/auth_users/router.py` | Auth/router wiring без `md_articles`/`ex_user_post`; users-router только `/users/me`; `GET /api/v1/auth/protected` защищён `active_user` | import app, OpenAPI содержит protected и не содержит blog или `/users/{id}` | ~14 |
+| 1 | Развязать приложение от блога и добавить protected API | backend-dev | `fastapi-application/main.py`, новый `../../fastapi-application/core/setup_frontend.py`, `fastapi-application/auth_users/router.py` | Auth/router wiring без `md_articles`/`ex_user_post`; users-router только `/users/me`; `GET /api/v1/auth/protected` защищён `active_user` | import app, OpenAPI содержит protected и не содержит blog или `/users/{id}` | ~14 |
 | 2 | Очистить registry моделей | backend-dev | `fastapi-application/db_core/model_registry.py`, `fastapi-application/md_articles/models.py` | Metadata содержит auth/order модели, не blog models | импорт registry и auth `User` проходит | ~10 |
 | 3 | Удалить blog API и схемы | backend-dev | `md_articles/api_blog.py`, `md_articles/schema_art.py`, `md_articles/schema_blog.py` | Ни одного `/api/blog/*` и blog data import | файлы отсутствуют, импорт `main` проходит | ~9 |
 | 4 | Удалить остаток package | backend-dev | `md_articles/__init__.py`, `md_articles/setup_frontend.py` | `md_articles` больше не является backend package | `test ! -e md_articles` и import app | ~8 |
@@ -108,7 +108,7 @@
 
 ### Фаза 1: Развязать приложение от блога и добавить protected API
 
-- Файлы: `fastapi-application/main.py`, новый `fastapi-application/setup_frontend.py`, `fastapi-application/auth_users/router.py`.
+- Файлы: `fastapi-application/main.py`, новый `../../fastapi-application/core/setup_frontend.py`, `fastapi-application/auth_users/router.py`.
 - Контракт: `mount_frontend(app: FastAPI) -> None` отвечает только за auth static и generic React SPA. В `main.py` остаются `router_api`, `r_order_one`, `auth_users.router`; импортов `md_articles` и `ex_user_post` нет. Auth router публикует `/auth/jwt/login`, `/auth/jwt/logout`, `/auth/register`, `/auth/account`, `/users/me` (GET/PATCH), но не `/users/{id}`. В том же auth router добавляется `GET /api/v1/auth/protected`, защищённый `active_user`, с JSON-ответом authorized user.
 - Шаги: перенести generic SPA fallback из старого setup-модуля без blog imports; сохранить `/static` для avatar; подключить auth router напрямую; сохранить semantics `/users/me`; удалить generated user-by-id routes; добавить protected API без изменения auth backend.
 - Checkpoint: из `fastapi-application/` выполнить `../.venv/bin/python -c "from main import main_app; paths=main_app.openapi()['paths']; print(len(paths)); print('/api/v1/auth/protected' in paths); print(any(p.startswith('/api/blog') for p in paths)); print('/users/{id}' in paths); print('/users/me' in paths)"`. Ожидание: `23`, `True`, `False`, `False`, `True`.

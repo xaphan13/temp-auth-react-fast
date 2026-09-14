@@ -44,7 +44,7 @@
 
 ### Архитектура
 
-`fastapi-application/create_fastapi.py` предоставляет фабрику `create_app()` с `lifespan`
+`fastapi-application/core/create_fastapi.py` предоставляет фабрику `create_app()` с `lifespan`
 (engine создаётся на импорте, dispose — в shutdown). `main.py` собирает `main_app`:
 подключает корневые роутеры, вызывает `md_articles.include_router_api_frontend(main_app)`
 (сессии, current_user-middleware, статика `/static`, JSON-роутер блога), затем

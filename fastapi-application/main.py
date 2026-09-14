@@ -4,9 +4,9 @@ from auth_users.router import router as auth_users_router
 from base_dir_path import BASE_DIR
 from config_log import logF
 from core.config import settings
-from create_fastapi import create_app
+from core.create_fastapi import create_app
 from ex_order_product.router_order_one import r_order_one
-from setup_frontend import mount_frontend
+from core.setup_frontend import mount_frontend
 
 # load_model_registry()
 

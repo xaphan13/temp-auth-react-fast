@@ -20,8 +20,8 @@ uv sync                      # создаёт .venv по uv.lock
 ```
 
 Профиль БД выбирается в `fastapi-application/core/config.py` (поле `env_file` класса
-`Settings`): по умолчанию активен `dev_sqlite.env` — SQLite (`sqlite+aiosqlite:///./one_simple.db`),
-никакой внешней БД не нужно. Профиль PostgreSQL (`prod_db.env`,
+`Settings`): по умолчанию активен `db_sqlite_dev.env` — SQLite (`sqlite+aiosqlite:///./one_simple.db`),
+никакой внешней БД не нужно. Профиль PostgreSQL (`db_post_prod.env`,
 `postgresql+asyncpg://user:password@localhost:5432/shop`) включается раскомментированием
 строки в `env_file`; файл `.env`, если существует, перекрывает оба.
 
@@ -53,7 +53,7 @@ cd frontend && npm install && npm run build   # → frontend/dist
 
 Для PostgreSQL поднимите dev-стек из `docker-compose.yml` (pg на `5432`, adminer на
 `8080`, pgadmin на `5050`; креды `user/password`, база `shop`) и переключите профиль на
-`prod_db.env`.
+`db_post_prod.env`.
 
 ## Запуск агентного режима
 
@@ -83,13 +83,13 @@ adversary — в `tasks/current/ADVERSARIAL_REVIEW.md`, сценарии и сы
 
 | Переменная | Обязательна | По умолчанию / профиль |
 |---|---|---|
-| `APP__DB__URL` | да | `dev_sqlite.env`: sqlite, `prod_db.env`: postgres |
+| `APP__DB__URL` | да | `db_sqlite_dev.env`: sqlite, `db_post_prod.env`: postgres |
 | `APP__DB__ECHO` | нет | `0` |
 | `APP__RUN__HOST` / `APP__RUN__PORT` | нет | `0.0.0.0` / `8000` |
 | `APP__GUNICORN__WORKERS` | нет | `1` |
 | `APP__WEB__SECRET_KEY` | нет | dev-значение (подпись JWT и auth-токенов) |
 
-Env-файлы лежат в `fastapi-application/` и **закоммичены** (`prod_db.env`, `dev_sqlite.env`) — это
+Env-файлы лежат в `fastapi-application/` и **закоммичены** (`db_post_prod.env`, `db_sqlite_dev.env`) — это
 учебный проект без секретов; `.env` (если создаёте) тоже в каталоге приложения и имеет
 высший приоритет.
 

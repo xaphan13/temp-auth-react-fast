@@ -11,8 +11,6 @@ export default function Header({ user, onLogout }: HeaderProps) {
   const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'nav-link active' : 'nav-link';
 
-  const avatarUrl = user ? `/static/profile_pics/${user.image_file}` : null;
-
   return (
     <header className="site-header">
       <div className="container header-inner">
@@ -32,15 +30,6 @@ export default function Header({ user, onLogout }: HeaderProps) {
               <NavLink to="/protected" className={navClass}>
                 Защищённая страница
               </NavLink>
-              {avatarUrl && (
-                <img
-                  className="header-avatar"
-                  src={avatarUrl}
-                  alt={`Аватар ${user.username}`}
-                  width={32}
-                  height={32}
-                />
-              )}
               <button type="button" className="nav-link as-button" onClick={onLogout}>
                 Выход
               </button>

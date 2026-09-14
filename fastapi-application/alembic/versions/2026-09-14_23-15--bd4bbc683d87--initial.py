@@ -1,22 +1,22 @@
-"""initial auth order schema
+"""initial
 
-Revision ID: 69cac9b8a3e7
+Revision ID: bd4bbc683d87
 Revises:
-Create Date: 2026-09-14 19:28:27.885557
+Create Date: 2026-09-14 23:15:53.736630
 
 """
 
-from collections.abc import Sequence
+from typing import Sequence, Union
 
-import fastapi_users_db_sqlalchemy.generics
-import sqlalchemy as sa
+import fastapi_users_db_sqlalchemy
 from alembic import op
+import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "69cac9b8a3e7"
-down_revision: str | None = None
-branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
+revision: str = "bd4bbc683d87"
+down_revision: Union[str, None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
@@ -46,7 +46,6 @@ def upgrade() -> None:
     op.create_table(
         "user",
         sa.Column("username", sa.String(length=20), nullable=True),
-        sa.Column("image_file", sa.String(length=20), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column(
             "id", fastapi_users_db_sqlalchemy.generics.GUID(), nullable=False

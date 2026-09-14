@@ -82,7 +82,7 @@ Auth router публикует login/logout, registration, account update и о�
 
 ## Конфигурация и база
 
-Конфигурация описана вложенными моделями в `core/config.py`. Переменные используют `APP__` и разделитель `__`; обязательное поле — `APP__DB__URL`. По умолчанию активен SQLite из `dev_sqlite.env`, PostgreSQL описан в `prod_db.env`.
+Конфигурация описана вложенными моделями в `core/config.py`. Переменные используют `APP__` и разделитель `__`; обязательное поле — `APP__DB__URL`. По умолчанию активен SQLite из `db_sqlite_dev.env`, PostgreSQL описан в `db_post_prod.env`.
 
 SQLite-файл `./one_simple.db` разрешается относительно cwd процесса. Поэтому приложение предпочтительно запускать из `fastapi-application/`. Логи привязаны к `BASE_DIR` и не зависят от cwd.
 

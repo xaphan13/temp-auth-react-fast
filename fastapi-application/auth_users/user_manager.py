@@ -66,17 +66,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
             raise UserAlreadyExists()
 
     async def on_after_register(self, user: User, request: Request | None = None) -> None:
-        """Дописывает username (из email, если не задан) и image_file."""
+        """Дописывает username из email, если он не задан."""
         update_dict: dict = {}
 
         if not user.username:
             derived = (user.email.split("@", 1)[0] or "")[:20].strip()
             user.username = derived
             update_dict["username"] = derived
-
-        if not user.image_file:
-            user.image_file = "default.jpg"
-            update_dict["image_file"] = "default.jpg"
 
         if update_dict:
             await self.user_db.update(user, update_dict)

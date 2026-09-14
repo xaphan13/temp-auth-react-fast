@@ -30,12 +30,7 @@ async def spa_fallback(request: Request) -> FileResponse | JSONResponse:
 
 
 def mount_frontend(app: FastAPI) -> None:
-    """Подключает avatar static, Vite assets и последний SPA catch-all."""
-    app.mount(
-        "/static",
-        StaticFiles(directory=BASE_DIR / "static", check_dir=False),
-        name="static",
-    )
+    """Подключает Vite assets и последний SPA catch-all."""
     app.mount(
         "/assets",
         StaticFiles(directory=ASSETS_DIR, check_dir=False),

@@ -147,8 +147,8 @@ uv sync                      # создаёт .venv по uv.lock
 ```
 
 Профиль БД выбирается в `fastapi-application/core/config.py` (`env_file` класса
-`Settings`): активен `dev_sqlite.env` — SQLite (`sqlite+aiosqlite:///./one_simple.db`), внешняя
-БД не нужна. PostgreSQL (`prod_db.env`, `postgresql+asyncpg://user:password@localhost:5432/shop`)
+`Settings`): активен `db_sqlite_dev.env` — SQLite (`sqlite+aiosqlite:///./one_simple.db`), внешняя
+БД не нужна. PostgreSQL (`db_post_prod.env`, `postgresql+asyncpg://user:password@localhost:5432/shop`)
 включается раскомментированием строки; `.env` перекрывает оба профиля. Docker-стек для
 PostgreSQL: `docker compose up -d` (pg на `5432`, adminer `8080`, pgadmin `5050`).
 
@@ -234,7 +234,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/   # SPA (нуж�
   с префиксом `APP__` и разделителем `__` (`APP__DB__URL`, `APP__RUN__PORT`).
   Единственное обязательное поле — `db.url`.
 - Переключение профиля БД — правка списка `env_file` в `core/config.py`
-  (раскомментировать `prod_db.env`), **не** переменная окружения.
+  (раскомментировать `db_post_prod.env`), **не** переменная окружения.
 - Новые настройки добавляйте как поля соответствующей вложенной модели с дефолтом,
   а не читайте `os.environ` напрямую.
 
@@ -268,7 +268,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/   # SPA (нуж�
   `db_core`/`core.config` в `env.py`). Цели Makefile `migr_gener`/`migr_to_base`
   используют устаревший путь `venv/bin/alembic` — фактический интерпретатор в `.venv/`.
 - **Профиль БД переключается правкой кода** (`core/config.py`, `env_file`), env-файлы
-  `prod_db.env`/`dev_sqlite.env` закоммичены намеренно (учебный проект, секретов нет).
+  `db_post_prod.env`/`db_sqlite_dev.env` закоммичены намеренно (учебный проект, секретов нет).
 
 ### Известные дефекты (из docs/04_code_quality.md) — не «исправляйте» без отдельного задания
 

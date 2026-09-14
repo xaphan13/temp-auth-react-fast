@@ -1,6 +1,5 @@
-// Страница аккаунта: GET /users/me при входе, форма username/email
-// + multipart upload аватара (picture) через POST /auth/account.
-// После успеха — обновление пользователя в AuthContext + toast. Показ текущего аватара.
+// Страница аккаунта: GET /users/me при входе, форма username/email.
+// После успеха — обновление пользователя в AuthContext + toast.
 // Доступ только для авторизованных (RequireAuth в App.tsx), 401/API-сбой — страховка.
 
 import { useEffect, useState, type FormEvent } from 'react';
@@ -13,12 +12,11 @@ import type { User } from '../types';
 import type { ToastCategory } from '../components/Toast';
 
 export default function AccountPage() {
-  const { user, setUser } = useAuth();
+  const { setUser } = useAuth();
   const { showToast } = useToast();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [picture, setPicture] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -59,10 +57,8 @@ export default function AccountPage() {
       const resp: MessageResp & { user: User } = await updateAccount({
         username,
         email,
-        picture,
       });
       setUser(resp.user);
-      setPicture(null);
       showToast(resp.message, resp.category as ToastCategory);
     } catch (err) {
       const serverErrors = extractErrors(err);
@@ -84,20 +80,9 @@ export default function AccountPage() {
     return <div className="page-stub text-muted">Загрузка аккаунта...</div>;
   }
 
-  // Аватар из AuthContext (обновляется после успешного POST).
-  const avatarFile = user?.image_file || 'default.jpg';
-  const avatarUrl = `/static/profile_pics/${avatarFile}`;
-
   return (
     <div className="auth-page">
       <h1>Аккаунт</h1>
-
-      <div className="account-avatar">
-        <img src={avatarUrl} alt="Аватар" width={125} height={125} />
-        <div className="text-muted">
-          Аватар 125×125, сохраняется на сервере
-        </div>
-      </div>
 
       <form onSubmit={handleSubmit} noValidate>
         <FormField
@@ -116,19 +101,6 @@ export default function AccountPage() {
           errors={errors.email}
           onChange={setEmail}
         />
-        <div className="form-field">
-          <label htmlFor="picture">Новый аватар (необязательно)</label>
-          <input
-            id="picture"
-            name="picture"
-            type="file"
-            accept="image/*"
-            onChange={(e) => setPicture(e.target.files?.[0] ?? null)}
-          />
-          {errors.picture && (
-            <div className="form-error-text">{errors.picture.join(', ')}</div>
-          )}
-        </div>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
           {submitting ? 'Сохранение...' : 'Сохранить'}
         </button>

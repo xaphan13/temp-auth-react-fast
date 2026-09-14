@@ -1,10 +1,10 @@
 // Функции API авторизации и аккаунта: register, login, logout,
-// getAccount, updateAccount (multipart). Backend — fastapi-users:
+// getAccount, updateAccount. Backend — fastapi-users:
 // /auth/jwt/login (form, 204), /auth/jwt/logout (form, 204),
-// /auth/register (JSON, 201), /auth/account (multipart),
+// /auth/register (JSON, 201), /auth/account (form),
 // /users/me (JSON, 401 для анонима).
 
-import { ApiError, getJson, postForm, postJson, postMultipart } from './client';
+import { ApiError, getJson, postForm, postJson } from './client';
 import type { User } from '../types';
 
 export interface MessageResp {
@@ -40,13 +40,12 @@ export async function getAccount(): Promise<{ user: User }> {
 export function updateAccount(body: {
   username: string;
   email: string;
-  picture?: File | null;
 }): Promise<MessageResp & { user: User }> {
-  const formData = new FormData();
-  formData.set('username', body.username);
-  formData.set('email', body.email);
-  if (body.picture) formData.set('picture', body.picture);
-  return postMultipart<MessageResp & { user: User }>('/auth/account', formData);
+  const form = new URLSearchParams({
+    username: body.username,
+    email: body.email,
+  });
+  return postForm<MessageResp & { user: User }>('/auth/account', form);
 }
 
 // getCurrentUser: для AuthContext.refresh() — возвращает User или null

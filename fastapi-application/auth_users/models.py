@@ -3,14 +3,14 @@
 
 Наследуется от SQLAlchemyBaseUserTableUUID — тот добавляет id (UUID PK),
 email (unique, index), hashed_password, is_active, is_superuser, is_verified.
-Поля проекта (username, image_file, created_at) добавляются здесь.
+Поля проекта (username, created_at) добавляются здесь.
 
 Стиль: `Mapped[str_len_20] = mapped_column(...)` — тот же приём, что в
 md_articles/models.py::BlogUser; переиспользуемые Annotated-типы колонок
 живут в db_core/type_for_models.py.
 """
 
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from db_core.model_base import Base
 from db_core.type_for_models import str_len_20
@@ -33,14 +33,10 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     __tablename__ = "user"
 
     username: Mapped[str_len_20 | None] = mapped_column(unique=True, nullable=True)
-    image_file: Mapped[str_len_20] = mapped_column(
-        nullable=False,
-        default="default.jpg",
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
     )
 
     def __repr__(self) -> str:
-        return f"User('{self.email}', '{self.username}', '{self.image_file}')"
+        return f"User('{self.email}', '{self.username}')"

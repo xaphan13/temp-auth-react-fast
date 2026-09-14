@@ -115,12 +115,6 @@ input {
   appearance: none;
 }
 
-.header-avatar {
-  border: 2px solid #9ca3af;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
 .page-stub {
   width: 100%;
   padding: 1rem 0;
@@ -215,19 +209,6 @@ input {
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.65;
-}
-
-.account-avatar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.account-avatar img {
-  border: 1px solid #d1d5db;
-  border-radius: 50%;
-  object-fit: cover;
 }
 
 .site-footer {

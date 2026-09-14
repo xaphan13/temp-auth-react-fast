@@ -148,7 +148,7 @@ uv sync                      # создаёт .venv по uv.lock
 ```
 
 Профиль БД выбирается в `fastapi-application/core/config.py` (`env_file` класса
-`Settings`): активен `dev_sqlite.env` — SQLite, внешняя БД не нужна. PostgreSQL (`prod_db.env`)
+`Settings`): активен `db_sqlite_dev.env` — SQLite, внешняя БД не нужна. PostgreSQL (`db_post_prod.env`)
 включается раскомментированием строки; `.env` перекрывает оба профиля. Docker-стек для
 PostgreSQL: `docker compose up -d` (pg на `5432`).
 

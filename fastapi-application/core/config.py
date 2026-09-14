@@ -82,8 +82,8 @@ class DatabaseConfig(BaseModel):
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(
-            BASE_DIR / "prod_db.env",  # postgres
-            BASE_DIR / "dev_sqlite.env",  # sqlite
+            BASE_DIR / "db_post_prod.env",  # postgres
+            BASE_DIR / "db_sqlite_dev.env",  # sqlite
             BASE_DIR / ".env",
         ),
         case_sensitive=False,

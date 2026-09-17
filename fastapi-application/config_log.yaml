@@ -27,14 +27,12 @@ formatters:
 handlers:
   rotating_file1:
     class: logging.handlers.RotatingFileHandler
-    level: INFO
     formatter: form2
     filename: "one_fast.log"
     maxBytes: 1048576
     backupCount: 20
   console1:
     class: logging.StreamHandler
-    level: INFO
     formatter: con2
     stream: ext://sys.stdout
 
@@ -47,7 +45,8 @@ loggers:
     level: INFO
   OnlyFile:
     handlers: ["rotating_file1"]
-    level: INFO
+#    level: INFO
+    level: DEBUG
   # Перехватываем логи Uvicorn
   # "uvicorn": {
   #     "handlers": ["rotating_file1", "console1"],

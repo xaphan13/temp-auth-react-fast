@@ -1,27 +1,30 @@
-# QWEN.md — my-fastapi-one
+# QWEN.md — temp-auth-react-fast
 
 Контекст-инструкция для главной сессии Qwen Code (оркестратор). Правила для всей
 команды — в [AGENTS.md](AGENTS.md); текущее задание — в
 [tasks/current/REQUIREMENTS.md](tasks/current/REQUIREMENTS.md). Подробная документация
-по проекту — в [`docs/`](docs/), карта — [`docs/01_project_structure.md`](docs/01_project_structure.md).
+по проекту — в [`docs/`](docs/); карта для моделей «по какому вопросу куда идти» —
+[`docs/00_agent_navigation.md`](docs/00_agent_navigation.md).
 
 ## Проект — выжимка
 
-Учебно-демонстрационный FastAPI 0.111+ / Python 3.12. Три части: демонстрационная
-(`api/` — 9 способов Depends, 4 стиля параметров), рабочая (`ex_user_post/`,
-`ex_order_product/`, `db_core/` — SQLAlchemy 2.0 async + Alembic), блог
-(`md_articles/` + `frontend/` — React SPA на JSON API `/api/blog`).
+Учебно-демонстрационный auth-only шаблон: FastAPI 0.111+ / Python 3.12, авторизация
+`fastapi-users` (CookieTransport + JWTStrategy) поверх демонстрационного API
+(`api/` — Depends и 4 стиля параметров) и домена заказов (`ex_order_product/`,
+`db_core/` — SQLAlchemy 2.0 async + Alembic). Фронтенд — React 18 + TypeScript +
+Vite + Tailwind v4 в `frontend/`; собранный `frontend/dist` раздаётся тем же
+ASGI-приложением (`core/setup_frontend.py`) и не коммитится.
 
-**Дублирование маршрутов и обработчиков в `api/` намеренное** — не рефакторить.
+**Стек:** Python 3.12, uv, FastAPI 0.111+, fastapi-users 15, Pydantic 2 +
+pydantic-settings, SQLAlchemy 2.0 async (aiosqlite активен), Alembic, uvicorn/
+gunicorn, orjson, React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
 
-**Стек:** Python 3.12, uv, FastAPI 0.111+, Pydantic 2 + pydantic-settings,
-SQLAlchemy 2.0 async (aiosqlite активен), Alembic, uvicorn/gunicorn, orjson,
-React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
+**Маршруты:** 23 path-ключа OpenAPI. Top-level `main_app.routes` — 9 объектов:
+4 служебных `Route` + SPA catch-all + `Mount /assets` + три непрозрачных
+`_IncludedRouter` (starlette оборачивает каждый `include_router`). Наивный
+`len(main_app.routes)` не показателен — считайте OpenAPI-пути.
 
-**Маршруты:** 44 route-объекта. 37 `APIRoute` (21 демо + 7 блог + 9 auth_users)
-+ 5 `Route` (4 служебных + SPA catch-all) + 2 `Mount` (/static, /assets).
-
-Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.routes))"` → `44`.
+Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"` → `23`.
 
 **Запуск:** `cd fastapi-application && ../.venv/bin/uvicorn main:main_app --host 0.0.0.0 --port 8000 --reload`. cwd = `fastapi-application/` — SQLite-файл резолвится оттуда.
 
@@ -128,7 +131,8 @@ React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
 2. **Исполнение по фазам.** Делегируй строго по плану. Фаза доложила — ревью диффа
    и checkpoint: ruff чист, счётчик маршрутов сходится, лишнего не написано.
 3. qa: запуск из `fastapi-application/`, curl-сценарии из критериев успеха, регресс
-   (`/docs`, `/users/get_all_users`, `/orders/get_all_orders`, один `dep_examples`).
+   (`/docs`, анонимный `/users/me` → 401, `/orders/get_all_orders?params=id`,
+   один из `/api/v1/dep_examples/*` с заголовком `foobar`, полный auth-цикл).
 4. adversary: короткий враждебный прогон → триаж каждой находки.
 5. Пройди критерии успеха один за другим с доказательствами.
 6. Заархивируй задание.

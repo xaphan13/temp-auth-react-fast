@@ -96,22 +96,24 @@ Env-файлы лежат в `fastapi-application/` и **закоммичены*
 
 ## Модель данных
 
-`__tablename__` генерируется автоматически из имени класса (`CamelCase` → `snake_case`);
-`OrderProductAssociation` переопределяет его вручную. Миграции: 3 ревизии Alembic в
-`fastapi-application/alembic/versions/`. Реестр статей блога — `md_articles/articles.yaml`
-(контент-статьи `.md` пользователь кладёт в `fastapi-application/content_art/`).
-
+`__tablename__` генерируется автоматически из имени класса (`CamelCase` → `snake_case`).
+Миграции: `fastapi-application/alembic/versions/`.
 
 ## Документация
 
-В папке [`docs/`](docs/) лежит актуальная техническая документация по проекту:
+В папке [`docs/`](docs/) лежит актуальная техническая документация по проекту.
+Для AI-агентов входная точка — [`docs/00_agent_navigation.md`](docs/00_agent_navigation.md)
+(карта: по какому вопросу куда идти, инвентарь маршрутов, ограничения индекса):
 
+- [00_agent_navigation.md](docs/00_agent_navigation.md) — навигатор для AI-агентов;
 - [01_project_structure.md](docs/01_project_structure.md) — карта файлов и API-инвентарь;
 - [02_architecture.md](docs/02_architecture.md) — слои и границы приложения;
 - [03_execution_flow.md](docs/03_execution_flow.md) — запуск и прохождение запросов;
 - [04_authorization.md](docs/04_authorization.md) — текущая авторизация `fastapi-users`;
 - [05_authorization_upgrade.md](docs/05_authorization_upgrade.md) — варианты дальнейшего развития auth;
-- [06_blog.md](docs/06_blog.md) — отдельное устройство блога и реестра статей.
+- [06_auth_visual.md](docs/06_auth_visual.md) — диаграммы связей и рантайм-граф вызовов;
+- [07_auth_token_flow_code.md](docs/07_auth_token_flow_code.md) — где выдаётся JWT, где живёт cookie;
+- [08_jwt_transport_options.md](docs/08_jwt_transport_options.md) — транспорты JWT: cookie / Bearer / свой заголовок.
 
 ## Индекс кодовой базы
 
@@ -125,8 +127,8 @@ Env-файлы лежат в `fastapi-application/` и **закоммичены*
 
 ```bash
 uv run ruff check .                                                        # линтер (ruff в зависимостях)
-cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"   # 32 path-ключа OpenAPI
-cd fastapi-application && ../.venv/bin/uvicorn main:main_app --port 8000    # затем curl /docs, /users/me, /api/blog/articles, /
+cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"   # 23 path-ключа OpenAPI
+cd fastapi-application && ../.venv/bin/uvicorn main:main_app --port 8000    # затем curl /docs, /users/me (401 без cookie), /orders/get_all_orders, /
 ```
 
 Тестов нет — изменения проверяются запуском приложения и curl-запросами. Подробные

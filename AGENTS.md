@@ -1,28 +1,31 @@
-# AGENTS.md — my-fastapi-one (агентный режим)
+# AGENTS.md — temp-auth-react-fast (агентный режим)
 
 Контекст-инструкция для AI-агентов, работающих с кодом в этом репозитории, плюс правила
 команды агентов (раздел «Агентный режим» в конце файла). Оркестратор — главная сессия
 Qwen Code (инструкции — в `QWEN.md`). Подробная документация по проекту — в
-[`docs/`](docs/). При сомнениях главенствует текущее задание, затем проектные
-соглашения выше.
+[`docs/`](docs/); карта «по какому вопросу куда идти» для моделей —
+[`docs/00_agent_navigation.md`](docs/00_agent_navigation.md). При сомнениях главенствует
+текущее задание, затем проектные соглашения выше.
 
 ## Проект — выжимка
 
-Учебно-демонстрационный FastAPI 0.111+ / Python 3.12. Три части: демонстрационная
-(`api/` — 9 способов Depends, 4 стиля параметров), рабочая (`ex_user_post/`,
-`ex_order_product/`, `db_core/` — SQLAlchemy 2.0 async + Alembic), блог
-(`md_articles/` + `frontend/` — React SPA на JSON API `/api/blog`).
+Учебно-демонстрационный auth-only шаблон: FastAPI 0.111+ / Python 3.12, авторизация
+`fastapi-users` (CookieTransport + JWTStrategy) поверх демонстрационного API
+(`api/` — Depends и 4 стиля параметров) и домена заказов (`ex_order_product/`,
+`db_core/` — SQLAlchemy 2.0 async + Alembic). Фронтенд — React 18 + TypeScript +
+Vite + Tailwind v4 в `frontend/`; собранный `frontend/dist` раздаётся тем же
+ASGI-приложением (`core/setup_frontend.py`) и не коммитится.
 
-**Дублирование маршрутов и обработчиков в `api/` намеренное** — не рефакторить.
+**Стек:** Python 3.12, uv, FastAPI 0.111+, fastapi-users 15, Pydantic 2 +
+pydantic-settings, SQLAlchemy 2.0 async (aiosqlite активен), Alembic, uvicorn/
+gunicorn, orjson, React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
 
-**Стек:** Python 3.12, uv, FastAPI 0.111+, Pydantic 2 + pydantic-settings,
-SQLAlchemy 2.0 async (aiosqlite активен), Alembic, uvicorn/gunicorn, orjson,
-React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
+**Маршруты:** 23 path-ключа OpenAPI. Top-level `main_app.routes` — 9 объектов:
+4 служебных `Route` + SPA catch-all + `Mount /assets` + три непрозрачных
+`_IncludedRouter` (starlette оборачивает каждый `include_router`). Наивный
+`len(main_app.routes)` не показателен — считайте OpenAPI-пути.
 
-**Маршруты:** 44 route-объекта. 37 `APIRoute` (21 демо + 7 блог + 9 auth_users)
-+ 5 `Route` (4 служебных + SPA catch-all) + 2 `Mount` (/static, /assets).
-
-Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.routes))"` → `44`.
+Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"` → `23`.
 
 **Тестов нет** — изменения проверяются запуском приложения и curl.
 
@@ -42,9 +45,12 @@ cd fastapi-application
 **Линтеры:** `uv run ruff check .` / `uv run ruff format .` — ruff и black в
 зависимостях проекта.
 
-**Smoke-набор:** счётчик маршрутов (выше) + `/docs`, `/users/get_all_users`,
-`/orders/get_all_orders`, один из `/api/v1/dep_examples/*`, `/api/blog/articles`.
-Не утверждайте, что изменение проверено, без фактического запуска.
+**Smoke-набор:** счётчик OpenAPI-путей (23, выше) + `/docs`, анонимный
+`/users/me` → 401, `/orders/get_all_orders?params=id`, один из
+`/api/v1/dep_examples/*` (нужен заголовок `foobar`), полный auth-цикл
+register → login → `/users/me` → `/api/v1/auth/protected` → logout
+(рецепт curl — `docs/05_authorization.md`). Не утверждайте, что изменение
+проверено, без фактического запуска.
 
 ## Документация — маршрутизатор
 
@@ -52,17 +58,15 @@ cd fastapi-application
 
 | Тема | Файл |
 |---|---|
-| Карта проекта, дерево, инварианты окружения | [`docs/01_project_structure.md`](docs/01_project_structure.md) |
-| Архитектура, слои, потоки данных, развёртывание | [`docs/02_architecture.md`](docs/02_architecture.md) |
-| Жизненный цикл, маршруты, процессы, логирование | [`docs/03_execution_flow.md`](docs/03_execution_flow.md) |
-| Качество кодовой базы, дефекты по критичности | [`docs/04_code_quality.md`](docs/04_code_quality.md) |
-| Паттерны DI / параметры / async-слой данных | `docs/05`–`07` |
-| Идеи развития: DI+API / слой данных / тесты+инфра | `docs/08`–`10` |
-| Блог: архитектура, JSON API, React-интеграция, SPA-модуль | `docs/11`–`13`, `15` |
-| Фабрика `create_app()` и `lifespan` | [`docs/14_create_fastapi_factory.md`](docs/14_create_fastapi_factory.md) |
-
-Авторизация (fastapi-users, пакет `auth_users/`): `docs/04_authorization.md` внутри
-пакета — см. маршрутизатор в `docs/01`.
+| Навигатор для AI-агентов: задача → точка входа, инвентарь маршрутов, ограничения индекса | [`docs/00_agent_navigation.md`](docs/00_agent_navigation.md) |
+| Карта проекта, дерево, API-инвентарь, конфиг и база | [`docs/01_project_structure.md`](docs/01_project_structure.md) |
+| Архитектура, слои, границы пакетов | [`docs/02_architecture.md`](docs/02_architecture.md) |
+| Жизненный цикл: импорт, lifespan, порядок маршрутов, ошибки | [`docs/03_execution_flow.md`](docs/03_execution_flow.md) |
+| Авторизация: полный цикл React → FastAPI → JWT-cookie | [`docs/04_authorization.md`](docs/04_authorization.md) |
+| Auth: варианты развития (production, verification, роли) | [`docs/05_authorization_upgrade.md`](docs/05_authorization_upgrade.md) |
+| Auth: диаграммы связей и рантайм-граф вызовов | [`docs/06_auth_visual.md`](docs/06_auth_visual.md) |
+| Auth: где выдаётся JWT, где живёт cookie — построчно по файлам | [`docs/07_auth_token_flow_code.md`](docs/07_auth_token_flow_code.md) |
+| Auth: транспорты JWT — cookie / Bearer / свой заголовок | [`docs/08_jwt_transport_options.md`](docs/08_jwt_transport_options.md) |
 
 ## Соглашения разработки
 
@@ -80,9 +84,8 @@ cd fastapi-application
 - Конфиг — вложенные pydantic-модели в `core/config.py` (префикс `APP__`,
   разделитель `__`). Новые настройки — поля модели с дефолтом, не `os.environ`.
 - SQLAlchemy 2.0: `Mapped[]` + `mapped_column`, Annotated-типы из
-  `db_core/type_for_models.py`. Новые модели реэкспортируйте в `db_core/__init__.py`
-  — иначе невидимы для Alembic.
-- Pydantic-схемы — рядом с доменом (`schemas/` или `schema_*.py`), имена
+  `db_core/type_for_models.py`. Регистрация моделей в metadata — `db_core/model_registry.py::load_model_registry()`; новая модель добавляется импортом туда.
+- Pydantic-схемы — рядом с доменом (`schema_*.py`), имена
   `XxxCreate`/`XxxResp`, сериализация через `response_model`.
 
 ## Грабли
@@ -93,15 +96,17 @@ cd fastapi-application
   логгеры на импорте; engine создаётся на импорте `db_core/db_async.py`.
 - **Alembic требует cwd = `fastapi-application/`** (плоские импорты в `env.py`).
 - **Профиль БД переключается правкой кода** (`core/config.py`), не env-переменной.
+- **`mount_frontend()` — строго последним в `main.py`:** catch-all
+  `/{full_path:path}` после всех API-маршрутов.
+- **starlette оборачивает `include_router` в `_IncludedRouter`:** не
+  рассчитывайте на прозрачный список `app.routes`; инвентарь — из OpenAPI.
 
-### Известные дефекты — не «исправляйте» без отдельного задания
+### Известный дефект демонстрации — не «исправляйте» без отдельного задания
 
-- `GET /api/v1/depends_function_annotated/my_items/{item_id}` без `param_id` → 500
-  (`validate_query_safe` сравнивает `1 <= None`).
-- Дублирующийся `nickname` в `POST /users/create_user` → 500 вместо 409.
-- `UserResp` наследует поле `password` от `UserCreate` (утечка в ответе).
-- `TestUser` не реэкспортирован в `db_core/__init__.py` — невидим для Alembic
-  (намеренная демонстрация примеси).
+- `GET /api/v1/depends_function_annotated/my_items/{item_id}` без `query` → 500:
+  `validate_query_safe` (`api/my_routes_dep/pydantic_validator.py`) сравнивает
+  `1 <= v <= 1000` при `v=None`. Проверено 2026-09-23 (500 подтверждён curl,
+  трейсбек в логе). Это намеренная демонстрация ошибки валидатора.
 
 ## Git
 
@@ -154,8 +159,8 @@ cd fastapi-application
 | Агент | Зона (можно редактировать) | Чем проверяет изменения | Особые запреты |
 |---|---|---|---|
 | frontend-dev | `frontend/` (React SPA: источники, Vite-конфиги, сборка), `nginx/web/` (если появится в задании) | `cd frontend && npm run build` без ошибок; просмотр страницы; скриншот в `tasks/current/screenshots/` | Python-модули `fastapi-application/` — зона backend-dev; `frontend/dist` не коммитится |
-| backend-dev | Python-модули `fastapi-application/` (включая `alembic/`, env-профили, `md_articles/`, `auth_users/` — слой авторизации fastapi-users) | `uv run ruff check .`; счётчик маршрутов (44); curl изменённых эндпоинтов на запущенном приложении | `frontend/`, `nginx/web/`; известные дефекты — не чинить без задания; дублирование `api/my_routes_dep/` — намеренное |
-| qa | `tasks/current/e2e/`, `tasks/current/DEFECTS.md`, `tasks/current/screenshots/` | curl-сценарии из критериев успеха; регресс: `/docs`, `/users/get_all_users`, `/orders/get_all_orders`, один из `/api/v1/dep_examples/*`, `/art_home` | любой код продукта |
+| backend-dev | Python-модули `fastapi-application/` (включая `alembic/`, env-профили, `auth_users/` — слой авторизации fastapi-users) | `uv run ruff check .`; счётчик OpenAPI-путей (23); curl изменённых эндпоинтов на запущенном приложении | `frontend/`; известный дефект валидатора `validate_query_safe` — не чинить без задания; дублирующиеся демо-маршруты `api/` — намеренные |
+| qa | `tasks/current/e2e/`, `tasks/current/DEFECTS.md`, `tasks/current/screenshots/` | curl-сценарии из критериев успеха; регресс: `/docs`, анонимный `/users/me` → 401, `/orders/get_all_orders?params=id`, один из `/api/v1/dep_examples/*`, полный auth-цикл | любой код продукта |
 | adversary | `tasks/current/ADVERSARIAL_REVIEW.md`, `tasks/current/screenshots/` | curl по запущенному приложению; логи `fastapi-application/log/` | всё, кроме своих файлов |
 | spec-writer | `tasks/current/REQUIREMENTS.md` — только на фазе создания, одним `write_file` по шаблону `.qwen/skills/task-spec/TEMPLATE.md` | чек-лист скилла `task-spec` | код продукта; всё, кроме REQUIREMENTS.md на фазе создания |
 

@@ -75,6 +75,8 @@
 | Диаграммы связей и рантайм-граф вызовов (cProfile, py-spy) | `docs/06_auth_visual.md` |
 | Где выдаётся JWT, где живёт cookie, кто шлёт — построчно по файлам | `docs/07_auth_token_flow_code.md` |
 | Транспорты/стратегии JWT: cookie vs Bearer vs свой заголовок | `docs/08_jwt_transport_options.md` |
+| Общее пособие по аутентификации и авторизации: методы, протоколы, угрозы и выбор | `docs/09_auth_tutorial.md` |
+| Пособие: Cookie/Bearer и JWT/Database/Redis стратегии с кодом | `docs/10_auth_transport_strategy_tutorial.md` |
 
 ## Задача → точка входа в коде
 

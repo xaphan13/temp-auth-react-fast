@@ -18,10 +18,10 @@
 
 | Вопрос | Ответ | Где в коде |
 |---|---|---|
-| Где выдаётся токен? | Внутри библиотеки `fastapi-users`, на `POST /auth/jwt/login`. Своего обработчика в проекте нет — маршрут порождается `get_auth_router(auth_backend)` | `auth_users/router.py` + `auth_users/auth_backend.py` |
-| Где он хранится в браузере? | В cookie `auth`, `HttpOnly`. Браузер сохраняет её сам по `Set-Cookie`. JavaScript токен прочитать не может | ставит `CookieTransport`, JS не участвует |
-| Кто посылает cookie? | Браузер, автоматически. JS лишь помечает запрос `credentials: 'include'` | `frontend/src/api/client.ts` |
-| Кто инициирует передачу токена на защищённый ресурс? | Браузер — по факту наличия cookie. Проверяет токен бэкенд через `Depends(active_user)`; фронтовый `RequireAuth` API не защищает | `auth_users/router.py`, `frontend/src/App.tsx` |
+| Где выдаётся cookie-токен? | Внутри `fastapi-users` на `POST /auth/cookie/login`; Bearer-токен выдаётся на `POST /auth/bearer/login`. Оба auth-router создаются через `get_auth_router`, регистрация общая: `POST /auth/register` | `auth_users/router.py` + `auth_users/auth_backend.py` |
+| Где хранится токен в браузере? | В cookie `auth`, `HttpOnly`. Браузер сохраняет её сам по `Set-Cookie`; JavaScript токен прочитать не может | ставит `CookieTransport`, JS не участвует |
+| Кто посылает cookie? | Браузер, автоматически. JS лишь помечает запрос `credentials: 'include'`; state-changing запросы с auth-cookie также несут `X-CSRF-Token` | `frontend/src/api/client.ts` |
+| Кто инициирует передачу токена на защищённый ресурс? | Браузер прикладывает cookie либо клиент явно передаёт Bearer; проверяет backend через `Depends(active_user)`. Фронтовый `RequireAuth` API не защищает | `auth_users/router.py`, `frontend/src/App.tsx` |
 
 ---
 
@@ -34,6 +34,7 @@
 from core.config import settings
 from fastapi_users.authentication import (
     AuthenticationBackend,
+    BearerTransport,
     CookieTransport,
 )
 from fastapi_users.authentication.strategy import JWTStrategy
@@ -55,16 +56,25 @@ def get_jwt_strategy() -> JWTStrategy:
     )
 
 
-auth_backend = AuthenticationBackend(
-    name="jwt",
+bearer_transport = BearerTransport(tokenUrl="/auth/bearer/login")
+
+cookie_backend = AuthenticationBackend(
+    name="jwt-cookie",
     transport=cookie_transport,
+    get_strategy=get_jwt_strategy,
+)
+bearer_backend = AuthenticationBackend(
+    name="jwt-bearer",
+    transport=bearer_transport,
     get_strategy=get_jwt_strategy,
 )
 ```
 
-`name="jwt"` — это то, что даёт префикс пути `/auth/jwt/...`. Замена транспорта на
-`BearerTransport` здесь же, одной строкой, даёт другую схему передачи токена, ничего больше
-в проекте не меняя (см. отдельный документ про способы передачи).
+В текущей реализации зарегистрированы два `AuthenticationBackend`: `cookie_backend`
+(`name="jwt-cookie"`) и `bearer_backend` (`name="jwt-bearer"`). Они используют одну
+`get_jwt_strategy`, но разные транспорты; login/logout подключены соответственно под
+`/auth/cookie/*` и `/auth/bearer/*`. Ранее использовавшийся префикс `/auth/jwt/*` — прошлый
+вариант маршрутизации, а не текущий контракт.
 
 ---
 
@@ -109,7 +119,8 @@ class AuthUsersConfig(BaseModel):
 их создаёт библиотека:
 
 ```python
-auth_router = fastapi_users.get_auth_router(auth_backend)                   # login + logout
+cookie_auth_router = fastapi_users.get_auth_router(cookie_backend)         # login + logout
+bearer_auth_router = fastapi_users.get_auth_router(bearer_backend)         # login + logout
 register_router = fastapi_users.get_register_router(UserRead, UserCreate)   # register
 users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
 users_router.routes = [route for route in users_router.routes if route.path == "/me"]
@@ -128,19 +139,22 @@ async def protected(user: Annotated[User, Depends(active_user)]):
 
 
 router = APIRouter()
-router.include_router(auth_router, prefix="/auth/jwt", tags=["auth-jwt"])
+router.include_router(cookie_auth_router, prefix="/auth/cookie", tags=["auth-cookie"])
+router.include_router(bearer_auth_router, prefix="/auth/bearer", tags=["auth-bearer"])
 router.include_router(register_router, prefix="/auth", tags=["auth-register"])
 router.include_router(users_router, prefix="/users", tags=["users"])
 router.include_router(account_router)
 router.include_router(protected_router)
 ```
 
-Что получается на выходе (префикс `/auth/jwt` даёт `name` транспортного backend'а):
+Текущие маршруты login/logout разделены по транспорту; регистрация общая:
 
 | Метод | Путь | Кто создал | Что делает |
 |---|---|---|---|
-| `POST` | `/auth/jwt/login` | `get_auth_router` | проверяет пароль, **создаёт JWT**, ставит cookie |
-| `POST` | `/auth/jwt/logout` | `get_auth_router` | удаляет cookie |
+| `POST` | `/auth/cookie/login` | cookie `get_auth_router` | проверяет пароль, создаёт JWT и ставит cookie `auth` |
+| `POST` | `/auth/cookie/logout` | cookie `get_auth_router` | удаляет cookie `auth`; middleware удаляет `csrf_token` |
+| `POST` | `/auth/bearer/login` | bearer `get_auth_router` | проверяет пароль, возвращает JSON с `access_token` и `token_type` |
+| `POST` | `/auth/bearer/logout` | bearer `get_auth_router` | stateless logout, ответ `204`; клиент забывает токен |
 | `POST` | `/auth/register` | `get_register_router` | создаёт пользователя, токен **не выдаёт** |
 | `GET`/`PATCH` | `/users/me` | `get_users_router` (обрезан до `/me`) | текущий пользователь |
 | `POST` | `/auth/account` | `auth_users/account.py` | меняет `username`/`email` |
@@ -149,7 +163,7 @@ router.include_router(protected_router)
 Экземпляр, от которого берутся зависимости, — `auth_users/fastapi_users_obj.py`:
 
 ```python
-fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend])
+fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [cookie_backend, bearer_backend])
 
 current_user = fastapi_users.current_user
 active_user = fastapi_users.current_user(active=True)
@@ -159,12 +173,14 @@ superuser_user = fastapi_users.current_user(active=True, superuser=True)
 
 ---
 
-## 4. Что библиотека делает на `POST /auth/jwt/login`
+## 4. Что библиотека делает при login
 
-Схема (реальные вызовы библиотеки, снятые профайлером в `docs/06_auth_visual.md`):
+Cookie- и Bearer-login используют одну `JWTStrategy`, но соответствующий транспорт
+формирует разный ответ. Для cookie-login схема (реальные вызовы библиотеки, снятые
+профайлером в `docs/06_auth_visual.md`):
 
 ```text
-POST /auth/jwt/login  (application/x-www-form-urlencoded: username=<email>&password=<...>)
+POST /auth/cookie/login  (application/x-www-form-urlencoded: username=<email>&password=<...>)
   │
   ├── authenticate()
   │     └── verify_and_update(password, hashed_password)
@@ -178,7 +194,10 @@ POST /auth/jwt/login  (application/x-www-form-urlencoded: username=<email>&passw
         └── Set-Cookie: auth=<JWT>; Max-Age=86400; HttpOnly; SameSite=Lax; Path=/
 ```
 
-Тело ответа пустое: успех — `204 No Content`. **JWT в JSON не приходит ни в каком виде.**
+Успешный CookieTransport login отвечает `204 No Content` без JSON-тела; middleware
+добавляет подписанную cookie `csrf_token=<nonce>.<hex HMAC-SHA256>`. BearerTransport
+login на `POST /auth/bearer/login` возвращает JSON `{"access_token": "...",
+"token_type": "bearer"}`. Оба формата используют JWT от той же стратегии.
 
 Как этот же ответ выглядит в терминале:
 
@@ -220,6 +239,12 @@ export class ApiError extends Error {
     }
 }
 
+function withCsrfHeader(headers: Record<string, string>): Record<string, string> {
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+    if (!match) return headers;
+    return { ...headers, 'X-CSRF-Token': decodeURIComponent(match[1]) };
+}
+
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
     const res = await fetch(path, { credentials: 'include', ...init });
     return res;
@@ -249,7 +274,7 @@ export async function getJson<T = unknown>(path: string): Promise<T> {
 export async function postJson<T = unknown>(path: string, body: unknown): Promise<T> {
     const res = await request(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withCsrfHeader({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
     });
     return (await ensureOk(res)) as T;
@@ -258,8 +283,17 @@ export async function postJson<T = unknown>(path: string, body: unknown): Promis
 export async function postForm<T = unknown>(path: string, form: URLSearchParams): Promise<T> {
     const res = await request(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: withCsrfHeader({ 'Content-Type': 'application/x-www-form-urlencoded' }),
         body: form.toString(),
+    });
+    return (await ensureOk(res)) as T;
+}
+
+export async function postMultipart<T = unknown>(path: string, formData: FormData): Promise<T> {
+    const res = await request(path, {
+        method: 'POST',
+        headers: withCsrfHeader({}),
+        body: formData,
     });
     return (await ensureOk(res)) as T;
 }
@@ -278,19 +312,19 @@ fetch(path, { credentials: 'include', ...init })
 ### 5.2. `frontend/src/api/auth.ts` — login это ДВА запроса
 
 ```ts
-// /auth/jwt/login отвечает 204 — фронт после успешного логина делает
+// /auth/cookie/login отвечает 204 — фронт после успешного логина делает
 // refresh через /users/me (возвращает UserRead).
 export function login(body: { email: string; password: string }): Promise<User> {
     const form = new URLSearchParams({
         username: body.email,      // fastapi-users ждёт OAuth2-поле "username"
         password: body.password,
     });
-    return postForm<unknown>('/auth/jwt/login', form).then(() => getJson<User>('/users/me'));
+    return postForm<unknown>('/auth/cookie/login', form).then(() => getJson<User>('/users/me'));
 }
 
-// /auth/jwt/logout отвечает 204 — фронт НЕ падает, если logout вернул ошибку.
+// /auth/cookie/logout отвечает 204 — клиент отправляет X-CSRF-Token из csrf_token cookie.
 export function logout(): Promise<MessageResp> {
-    return postForm<MessageResp>('/auth/jwt/logout', new URLSearchParams())
+    return postForm<MessageResp>('/auth/cookie/logout', new URLSearchParams())
         .catch(() => ({ message: 'Logged out', category: 'info' }));
 }
 
@@ -323,7 +357,7 @@ export function getCurrentUser(): Promise<User | null> {
 
 | Шаг | HTTP | Что важно |
 |---|---|---|
-| 1 | `POST /auth/jwt/login` с телом `username=user@example.com&password=...` | `Content-Type: application/x-www-form-urlencoded`, ответ `204` — **тела нет** |
+| 1 | `POST /auth/cookie/login` с телом `username=user@example.com&password=...` | `Content-Type: application/x-www-form-urlencoded`, ответ `204` — **тела нет**, `Set-Cookie` содержит `auth` и `csrf_token` |
 | 2 | `GET /users/me` | браузер уже приложил cookie `auth` автоматически; ответ `200` + `UserRead` |
 
 Почему нельзя обойтись одним запросом: `204` не несёт данных, поэтому объект пользователя
@@ -380,13 +414,13 @@ const handleSubmit = async (e: FormEvent) => {
     }
     setSubmitting(true);
     try {
-        // fastapi-users /auth/jwt/login -> 204, затем /users/me.
+        // fastapi-users /auth/cookie/login -> 204, затем /users/me.
         const user: User = await login({ email, password });
         setUser(user);
         showToast('Вход выполнен', 'success');
         navigate('/');
     } catch (err) {
-        // fastapi-users /auth/jwt/login: 400 при неверных email/пароле.
+        // fastapi-users /auth/cookie/login: 400 при неверных email/пароле.
         let message = 'Не удалось войти';
         let category: ToastCategory = 'danger';
         if (err instanceof ApiError) {
@@ -436,8 +470,10 @@ const handleLogout = async () => {
 </button>
 ```
 
-На бэке `POST /auth/jwt/logout` отвечает `Set-Cookie: auth=; Max-Age=0; ...` — браузер
-удаляет cookie. Локальный `setUser(null)` нужен, чтобы UI не ждал следующего запроса.
+На бэке `POST /auth/cookie/logout` отвечает `Set-Cookie: auth=; Max-Age=0; ...`, а middleware
+удаляет `csrf_token`; браузер удаляет обе cookie. Запрос с auth-cookie должен содержать
+`X-CSRF-Token`, равный текущему значению `csrf_token`. Локальный `setUser(null)` нужен,
+чтобы UI не ждал следующего запроса.
 
 ---
 
@@ -547,20 +583,32 @@ API от него не зависит: `curl` без всякого UI полу�
 ## 7. Полный поток одной картинкой (HTTP-уровень)
 
 ```text
-1) POST /auth/jwt/login                 (форма username=<email>&password=<...>)
+1) POST /auth/cookie/login              (форма username=<email>&password=<...>)
    ← 204  Set-Cookie: auth=<JWT>; HttpOnly; Max-Age=86400; SameSite=Lax
-   ↑ браузер сам сохранил cookie, JS токена не видел
+           Set-Cookie: csrf_token=<nonce>.<hex HMAC-SHA256>; Max-Age=86400; SameSite=Lax
+   ↑ браузер сам сохранил обе cookie, JS токена auth не видел
 
 2) GET /users/me                        Cookie: auth=<JWT>   ← приложил браузер
    ← 200  {"id": "...", "email": "...", "username": "..."}
    ↑ фронт записал объект в AuthContext.user
 
-3) GET /api/v1/auth/protected           Cookie: auth=<JWT>   ← приложил браузер
+3) PATCH /users/me                      Cookie: auth=<JWT>; csrf_token=<...>
+           X-CSRF-Token: <тот же csrf_token>
+   ← 200 или 422, но не CSRF-403
+
+4) GET /api/v1/auth/protected           Cookie: auth=<JWT>   ← приложил браузер
    ← 200  {"authenticated": true, "user": {...}}
 
-4) POST /auth/jwt/logout                Cookie: auth=<JWT>
+5) POST /auth/cookie/logout             Cookie: auth=<JWT>; csrf_token=<...>
+           X-CSRF-Token: <тот же csrf_token>
    ← 204  Set-Cookie: auth=; Max-Age=0
-   ↑ cookie удалена; JWT при этом остаётся валидным до exp, если его кто-то скопировал
+           Set-Cookie: csrf_token=; Max-Age=0
+   ↑ cookie удалены; JWT при этом остаётся валидным до exp, если его кто-то скопировал
+
+Bearer-вариант: POST /auth/bearer/login → JSON с access_token; затем
+Authorization: Bearer <JWT> на защищённых маршрутах. POST /auth/bearer/logout → 204;
+клиент забывает токен сам. Если auth-cookie также присутствует, state-changing Bearer-запрос
+всё равно обязан содержать корректный X-CSRF-Token.
 ```
 
 Проверка руками (сервер поднят из `fastapi-application/`, файл cookie — `/tmp/auth.cookies`):
@@ -575,21 +623,37 @@ curl -i -X POST http://127.0.0.1:8000/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com","password":"password123"}'   # 201
 
-# 3. логин — вот здесь и выдаётся JWT
+# 3. cookie-login — здесь выдаются auth и csrf_token
 curl -i -c /tmp/auth.cookies \
-  -X POST http://127.0.0.1:8000/auth/jwt/login \
+  -X POST http://127.0.0.1:8000/auth/cookie/login \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'username=user@example.com&password=password123'      # 204 + Set-Cookie: auth=...
+  --data 'username=user@example.com&password=password123'      # 204 + Set-Cookie: auth=..., csrf_token=...
 
 # 4. защищённые запросы с cookie
 curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/users/me              # 200
 curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/api/v1/auth/protected # 200
 
-# 5. выход
-curl -i -b /tmp/auth.cookies -X POST http://127.0.0.1:8000/auth/jwt/logout   # 204, cookie удаляется
+# 5. state-changing запрос: значение csrf_token должно быть одновременно cookie и header
+CSRF_TOKEN=$(awk '$6 == "csrf_token" { print $7 }' /tmp/auth.cookies)
+curl -i -b /tmp/auth.cookies -X PATCH http://127.0.0.1:8000/users/me \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-Token: ${CSRF_TOKEN}" \
+  --data '{"email":"user@example.com"}'                         # 200 или 422, но не CSRF-403
 
-# 6. после выхода
+# 6. cookie-logout с обязательным CSRF-заголовком
+curl -i -b /tmp/auth.cookies -c /tmp/auth.cookies \
+  -X POST http://127.0.0.1:8000/auth/cookie/logout \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H "X-CSRF-Token: ${CSRF_TOKEN}"                             # 204, обе cookie удаляются
+
+# 7. после выхода
 curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/api/v1/auth/protected    # 401
+
+# 8. Bearer login/logout (для отдельного клиента)
+curl -i -X POST http://127.0.0.1:8000/auth/bearer/login \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data 'username=user@example.com&password=password123'      # 200 + JSON access_token
+curl -i -X POST http://127.0.0.1:8000/auth/bearer/logout                   # 204
 ```
 
 Полезно посмотреть глазами, что именно лежит в cookie (только для отладки; в браузере
@@ -605,7 +669,8 @@ cat /tmp/auth.cookies          # там строка с auth=eyJhbGciOiJIUzI1NiI
 
 | Что проверяем | Куда смотреть |
 |---|---|
-| токен пришёл | Network → `POST /auth/jwt/login` → **Response Headers** → `set-cookie: auth=...` |
+| cookie-токен пришёл | Network → `POST /auth/cookie/login` → **Response Headers** → `set-cookie: auth=...` и `csrf_token=...` |
+| Bearer-токен пришёл | Network → `POST /auth/bearer/login` → **Response** → JSON `access_token` |
 | токен сохранён | Application (Storage) → Cookies → домен приложения → `auth`, атрибуты `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age` |
 | токен отправлен | Network → `GET /users/me` или `/api/v1/auth/protected` → **Request Headers** → `Cookie: auth=...` |
 | токена нет в JS | Console → `document.cookie` → значение `auth` **не появится** (это правильно, это `HttpOnly`) |
@@ -649,7 +714,7 @@ RegisterPage ──POST /auth/register──▶ 201 {id, email, username}
 |---|---|---|
 | отзыва JWT | logout удаляет cookie, но скопированный токен валлиден до `exp` или смены `secret_key` | `docs/05_authorization_upgrade.md` §4 |
 | `CORS` | годится для same-origin; другому origin не отдаст ни ответ, ни cookie | §1, §2 того же документа |
-| CSRF-защиты | `SameSite=Lax` закрывает часть сценариев, но не все | §1 |
+| CSRF-защиты | state-changing запрос с auth-cookie требует подписанный `csrf_token` в cookie и тот же `X-CSRF-Token`; смешанный cookie+Bearer не является обходом | §1 |
 | `Secure` cookie | `cookie_secure=false` — только для локального HTTP; в проде обязательно `true` | §1 |
 | refresh-токена | при истечении `86400` с пользователь просто становится анонимом (`/users/me` → 401) | — |
 | email verification / reset password | маршруты не подключены | §2 |

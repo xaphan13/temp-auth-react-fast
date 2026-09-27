@@ -10,7 +10,7 @@ Qwen Code (инструкции — в `QWEN.md`). Подробная докум
 ## Проект — выжимка
 
 Учебно-демонстрационный auth-only шаблон: FastAPI 0.111+ / Python 3.12, авторизация
-`fastapi-users` (CookieTransport + JWTStrategy) поверх демонстрационного API
+`fastapi-users` с CookieTransport и BearerTransport на общей JWTStrategy, Signed Double Submit Cookie CSRF для браузерного потока, поверх демонстрационного API
 (`api/` — Depends и 4 стиля параметров) и домена заказов (`ex_order_product/`,
 `db_core/` — SQLAlchemy 2.0 async + Alembic). Фронтенд — React 18 + TypeScript +
 Vite + Tailwind v4 в `frontend/`; собранный `frontend/dist` раздаётся тем же
@@ -20,12 +20,14 @@ ASGI-приложением (`core/setup_frontend.py`) и не коммитит�
 pydantic-settings, SQLAlchemy 2.0 async (aiosqlite активен), Alembic, uvicorn/
 gunicorn, orjson, React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
 
-**Маршруты:** 23 path-ключа OpenAPI. Top-level `main_app.routes` — 9 объектов:
-4 служебных `Route` + SPA catch-all + `Mount /assets` + три непрозрачных
-`_IncludedRouter` (starlette оборачивает каждый `include_router`). Наивный
-`len(main_app.routes)` не показателен — считайте OpenAPI-пути.
+**Маршруты:** 25 path-ключей OpenAPI. Auth inventory включает `/auth/cookie/login`,
+`/auth/cookie/logout`, `/auth/bearer/login`, `/auth/bearer/logout` и общий
+`/auth/register`; cookie state-changing запросы с auth-cookie требуют `X-CSRF-Token`.
+Top-level `main_app.routes` — 9 объектов: 4 служебных `Route` + SPA catch-all +
+`Mount /assets` + три непрозрачных `_IncludedRouter` (starlette оборачивает каждый
+`include_router`). Наивный `len(main_app.routes)` не показателен — считайте OpenAPI-пути.
 
-Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"` → `23`.
+Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"` → `25`.
 
 **Тестов нет** — изменения проверяются запуском приложения и curl.
 
@@ -45,12 +47,13 @@ cd fastapi-application
 **Линтеры:** `uv run ruff check .` / `uv run ruff format .` — ruff и black в
 зависимостях проекта.
 
-**Smoke-набор:** счётчик OpenAPI-путей (23, выше) + `/docs`, анонимный
+**Smoke-набор:** счётчик OpenAPI-путей (25, выше) + `/docs`, анонимный
 `/users/me` → 401, `/orders/get_all_orders?params=id`, один из
-`/api/v1/dep_examples/*` (нужен заголовок `foobar`), полный auth-цикл
-register → login → `/users/me` → `/api/v1/auth/protected` → logout
-(рецепт curl — `docs/05_authorization.md`). Не утверждайте, что изменение
-проверено, без фактического запуска.
+`/api/v1/dep_examples/*` (нужен заголовок `foobar`), полный cookie auth-цикл
+register → `/auth/cookie/login` → `/users/me` → `/api/v1/auth/protected` →
+`/auth/cookie/logout` с `X-CSRF-Token`, Bearer login/logout и CSRF-проверки
+state-changing cookie-запросов (включая смешанный cookie+Bearer).
+Не утверждайте, что изменение проверено, без фактического запуска.
 
 ## Документация — маршрутизатор
 
@@ -159,7 +162,7 @@ register → login → `/users/me` → `/api/v1/auth/protected` → logout
 | Агент | Зона (можно редактировать) | Чем проверяет изменения | Особые запреты |
 |---|---|---|---|
 | frontend-dev | `frontend/` (React SPA: источники, Vite-конфиги, сборка), `nginx/web/` (если появится в задании) | `cd frontend && npm run build` без ошибок; просмотр страницы; скриншот в `tasks/current/screenshots/` | Python-модули `fastapi-application/` — зона backend-dev; `frontend/dist` не коммитится |
-| backend-dev | Python-модули `fastapi-application/` (включая `alembic/`, env-профили, `auth_users/` — слой авторизации fastapi-users) | `uv run ruff check .`; счётчик OpenAPI-путей (23); curl изменённых эндпоинтов на запущенном приложении | `frontend/`; известный дефект валидатора `validate_query_safe` — не чинить без задания; дублирующиеся демо-маршруты `api/` — намеренные |
+| backend-dev | Python-модули `fastapi-application/` (включая `alembic/`, env-профили, `auth_users/` — слой авторизации fastapi-users) | `uv run ruff check .`; счётчик OpenAPI-путей (25); curl изменённых эндпоинтов на запущенном приложении | `frontend/`; известный дефект валидатора `validate_query_safe` — не чинить без задания; дублирующиеся демо-маршруты `api/` — намеренные |
 | qa | `tasks/current/e2e/`, `tasks/current/DEFECTS.md`, `tasks/current/screenshots/` | curl-сценарии из критериев успеха; регресс: `/docs`, анонимный `/users/me` → 401, `/orders/get_all_orders?params=id`, один из `/api/v1/dep_examples/*`, полный auth-цикл | любой код продукта |
 | adversary | `tasks/current/ADVERSARIAL_REVIEW.md`, `tasks/current/screenshots/` | curl по запущенному приложению; логи `fastapi-application/log/` | всё, кроме своих файлов |
 | spec-writer | `tasks/current/REQUIREMENTS.md` — только на фазе создания, одним `write_file` по шаблону `.qwen/skills/task-spec/TEMPLATE.md` | чек-лист скилла `task-spec` | код продукта; всё, кроме REQUIREMENTS.md на фазе создания |

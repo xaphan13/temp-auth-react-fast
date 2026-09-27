@@ -1,10 +1,14 @@
 """
-Бэкенд аутентификации fastapi-users: CookieTransport + JWTStrategy.
+Бэкенды аутентификации fastapi-users: CookieTransport и BearerTransport + JWTStrategy.
 
-`auth_backend` объединяет транспорт (cookie) и стратегию (JWT) — это то, что
-передаётся в FastAPIUsers(... [auth_backend]) и используется роутерами
-/auth/jwt/login и /auth/jwt/logout.
+Два backend'а для двух типов клиентов:
+- `cookie_backend` (jwt-cookie) — для браузера: JWT в cookie, автоматическая
+  передача React SPA;
+- `bearer_backend` (jwt-bearer) — для не-браузерных клиентов (CLI, мобильные,
+  server-to-server): JSON {"access_token": ..., "token_type": "bearer"} на
+  /auth/bearer/login, далее заголовок Authorization: Bearer <token>.
 
+Оба используют единый `get_jwt_strategy` — JWT payload идентичен (sub, exp).
 Все параметры читаются из settings.auth_users (см. core/config.py::AuthUsersConfig).
 Секрет JWT — settings.web.secret_key (общий секретный ключ проекта).
 """
@@ -12,6 +16,7 @@
 from core.config import settings
 from fastapi_users.authentication import (
     AuthenticationBackend,
+    BearerTransport,
     CookieTransport,
 )
 from fastapi_users.authentication.strategy import JWTStrategy
@@ -24,6 +29,8 @@ cookie_transport = CookieTransport(
     cookie_samesite=settings.auth_users.cookie_samesite,
 )
 
+bearer_transport = BearerTransport(tokenUrl="/auth/bearer/login")
+
 
 def get_jwt_strategy() -> JWTStrategy:
     return JWTStrategy(
@@ -33,8 +40,17 @@ def get_jwt_strategy() -> JWTStrategy:
     )
 
 
-auth_backend = AuthenticationBackend(
-    name="jwt",
+cookie_backend = AuthenticationBackend(
+    name="jwt-cookie",
     transport=cookie_transport,
     get_strategy=get_jwt_strategy,
 )
+
+bearer_backend = AuthenticationBackend(
+    name="jwt-bearer",
+    transport=bearer_transport,
+    get_strategy=get_jwt_strategy,
+)
+
+# Alias для обратной совместимости: auth_users/__init__.py реэкспортирует auth_backend.
+auth_backend = cookie_backend

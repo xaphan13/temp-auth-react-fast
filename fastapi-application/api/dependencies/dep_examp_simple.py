@@ -19,6 +19,16 @@ def single_direct_dependency(foobar: Annotated[str, Header()]):
     }
 
 
+# include_in_schema=False: маршрут доступен в рантайме, но не попадает в OpenAPI,
+# чтобы не менять замороженный счётчик путей (25).
+@router_dep_simple.get("/header_name", include_in_schema=False)
+def header_name(foobar: Annotated[str, Header(alias="foobar")]):
+    return {
+        "foobar": foobar,
+        "message": "header foobar",
+    }
+
+
 def get_x_foo_bar(foobar: Annotated[str, Header(alias="x-foo-bar")] = "") -> str:
     return foobar
 

@@ -10,11 +10,12 @@ from uuid import UUID
 
 from fastapi_users import FastAPIUsers
 
-from auth_users.auth_backend import auth_backend
+from auth_users.auth_backend import bearer_backend, cookie_backend
 from auth_users.models import User
 from auth_users.user_manager import get_user_manager
 
-fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend])
+# Порядок важен: authenticator перебирает backend'ы по порядку (cookie -> bearer).
+fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [cookie_backend, bearer_backend])
 
 current_user = fastapi_users.current_user
 active_user = fastapi_users.current_user(active=True)

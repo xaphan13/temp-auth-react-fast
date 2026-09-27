@@ -1,7 +1,9 @@
 // Базовый API-клиент для fastapi-users (/auth/*, /users/*).
 // Все запросы идут с cookie-сессией (credentials: 'include').
 // fastapi-users ставит cookie через Set-Cookie — fetch должен её принять.
-// CSRF больше нет: backend использует cookie-strategy авторизацию.
+// CSRF: backend требует X-CSRF-Token для state-changing запросов с auth-cookie
+// (Signed Double Submit Cookie). Токен живёт в non-HttpOnly cookie csrf_token,
+// SPA читает её и зеркалит значение в заголовок.
 
 export class ApiError extends Error {
     status: number;
@@ -12,6 +14,20 @@ export class ApiError extends Error {
         this.data = data;
         this.name = 'ApiError';
     }
+}
+
+// Читает csrf_token из document.cookie (backend ставит её non-HttpOnly).
+export function getCsrfToken(): string | null {
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
+// Добавляет X-CSRF-Token, только если csrf_token cookie существует.
+// Cookie нет (аноним, logout уже прошёл) — headers не меняются.
+function withCsrfHeader(headers: Record<string, string>): Record<string, string> {
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) return headers;
+    return { ...headers, 'X-CSRF-Token': csrfToken };
 }
 
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
@@ -43,7 +59,7 @@ export async function getJson<T = unknown>(path: string): Promise<T> {
 export async function postJson<T = unknown>(path: string, body: unknown): Promise<T> {
     const res = await request(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withCsrfHeader({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
     });
     return (await ensureOk(res)) as T;
@@ -52,14 +68,18 @@ export async function postJson<T = unknown>(path: string, body: unknown): Promis
 export async function postForm<T = unknown>(path: string, form: URLSearchParams): Promise<T> {
     const res = await request(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: withCsrfHeader({ 'Content-Type': 'application/x-www-form-urlencoded' }),
         body: form.toString(),
     });
     return (await ensureOk(res)) as T;
 }
 
 export async function postMultipart<T = unknown>(path: string, formData: FormData): Promise<T> {
-    // Content-Type не выставляем — браузер сам с boundary.
-    const res = await request(path, { method: 'POST', body: formData });
+    // Content-Type не выставляем — браузер сам с boundary. Только CSRF-заголовок.
+    const res = await request(path, {
+        method: 'POST',
+        headers: withCsrfHeader({}),
+        body: formData,
+    });
     return (await ensureOk(res)) as T;
 }

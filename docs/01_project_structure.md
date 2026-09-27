@@ -7,7 +7,7 @@
 - `fastapi-application/api/` — демонстрации `Depends` и извлечения параметров.
 - `fastapi-application/ex_order_product/` — демонстрационный домен заказов и товаров.
 - `fastapi-application/db_core/` — SQLAlchemy 2.0 async, общая `Base`, сессии и типы колонок.
-- `fastapi-application/auth_users/` — текущая авторизация на `fastapi-users`, аккаунт и avatar flow.
+- `fastapi-application/auth_users/` — авторизация на `fastapi-users` с CookieTransport и BearerTransport (cookie- и bearer-backend'ы), аккаунт и avatar flow; `CSRFMiddleware` находится в `auth_users/csrf.py`.
 - `fastapi-application/static/profile_pics/` — аватары пользователей.
 - `../fastapi-application/core/setup_frontend.py` — mounts для avatar static, frontend assets и SPA fallback.
 - `frontend/` — минимальное React-приложение auth-шаблона и клиентские API-обёртки.
@@ -41,6 +41,7 @@ fastapi-application/
 │   ├── auth_backend.py
 │   ├── fastapi_users_obj.py
 │   ├── router.py
+│   ├── csrf.py
 │   ├── account.py
 │   └── helpers.py
 ├── static/profile_pics/
@@ -65,7 +66,7 @@ cd fastapi-application
 ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"
 ```
 
-Ожидается **23 path-ключа OpenAPI**. Полный контракт удобнее всего смотреть в `/openapi.json`.
+Ожидается **25 path-ключей OpenAPI**. Полный контракт удобнее всего смотреть в `/openapi.json`.
 
 Группы маршрутов:
 
@@ -78,7 +79,7 @@ cd fastapi-application
 | Swagger/OpenAPI | `/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect` | FastAPI |
 | React и статика | `/assets/*`, `/static/*`, `/{full_path:path}` | `setup_frontend.py` |
 
-Auth router публикует login/logout, registration, account update и операции текущего пользователя: `/auth/jwt/login`, `/auth/jwt/logout`, `/auth/register`, `/auth/account`, `GET/PATCH /users/me`. Маршрут `/api/v1/auth/protected` требует `active_user` и является независимой backend-границей доступа.
+Auth router публикует login/logout для двух транспортов (cookie и bearer), registration, account update и операции текущего пользователя: `/auth/cookie/login`, `/auth/cookie/logout`, `/auth/bearer/login`, `/auth/bearer/logout`, `/auth/register`, `/auth/account`, `GET/PATCH /users/me`. Маршрут `/api/v1/auth/protected` требует `active_user` и является независимой backend-границей доступа. CSRF-защита cookie-транспорта реализована в `auth_users/csrf.py`.
 
 ## Конфигурация и база
 

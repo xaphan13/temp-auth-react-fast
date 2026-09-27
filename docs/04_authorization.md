@@ -1,8 +1,10 @@
-# 04. Авторизация: полный цикл React → FastAPI → JWT-cookie
+# 04. Авторизация: полный цикл React → FastAPI → JWT-cookie (dual transport)
 
-Этот документ описывает фактическую реализацию авторизации в проекте. Авторизация построена на `fastapi-users`, SQLAlchemy и связке `CookieTransport + JWTStrategy`.
+Этот документ описывает фактическую реализацию авторизации в проекте. Авторизация построена на `fastapi-users`, SQLAlchemy и двух транспортах: `CookieTransport` (для браузера) и `BearerTransport` (для CLI/мобильных/server-to-server), оба используют единую `JWTStrategy`.
 
-Главная идея: JWT не передаётся в JSON-ответе и не сохраняется в `localStorage`. После успешного входа backend отправляет браузеру cookie `auth`. Браузер сам прикладывает эту cookie к последующим same-origin-запросам, а backend проверяет подпись JWT и по идентификатору пользователя загружает пользователя из базы.
+Главная идея для браузера: JWT не передаётся в JSON-ответе и не сохраняется в `localStorage`. После успешного входа через `/auth/cookie/login` backend отправляет браузеру cookie `auth` и подписанную cookie `csrf_token`. Браузер сам прикладывает cookie `auth` к последующим same-origin-запросам, а frontend добавляет заголовок `X-CSRF-Token` для state-changing методов. Backend проверяет подпись JWT и по идентификатору пользователя загружает пользователя из базы.
+
+Для не-браузерных клиентов используется `/auth/bearer/login`, который возвращает JSON с `access_token`; клиент передаёт его в заголовке `Authorization: Bearer <token>`, CSRF-проверка для таких запросов не применяется, если auth-cookie отсутствует.
 
 ## 1. Общая схема
 
@@ -14,7 +16,7 @@ React LoginPage.handleSubmit()
         │
         ▼
 api/auth.ts::login()
-        │  POST /auth/jwt/login
+        │  POST /auth/cookie/login
         │  Content-Type: application/x-www-form-urlencoded
         │  credentials: include
         ▼
@@ -41,11 +43,18 @@ FastAPI / fastapi-users
 
 ## 2. Какие маршруты участвуют
 
+OpenAPI содержит 25 path-ключей. Auth-маршруты разделены по транспорту: `/auth/cookie/login`
+и `/auth/cookie/logout` для CookieTransport, `/auth/bearer/login` и `/auth/bearer/logout`
+для BearerTransport; регистрация общая — `/auth/register`. Оба backend используют одну
+`JWTStrategy`, поэтому меняется доставка credential, а не формат/проверка JWT.
+
 | Метод | Путь | Доступ | Результат |
 |---|---|---|---|
 | `POST` | `/auth/register` | публичный | создаёт пользователя, обычно `201` |
-| `POST` | `/auth/jwt/login` | публичный | проверяет пароль, ставит cookie `auth`, `204` |
-| `POST` | `/auth/jwt/logout` | публичный | удаляет cookie `auth`, `204` |
+| `POST` | `/auth/cookie/login` | публичный | проверяет пароль, ставит cookie `auth` и `csrf_token`, `204` |
+| `POST` | `/auth/cookie/logout` | требует CSRF | удаляет cookie `auth` и `csrf_token`, `204` |
+| `POST` | `/auth/bearer/login` | публичный | проверяет пароль, возвращает JSON `{"access_token": "...", "token_type": "bearer"}` |
+| `POST` | `/auth/bearer/logout` | stateless | пустой ответ `204`, клиент забывает токен сам |
 | `GET` | `/users/me` | авторизованный | возвращает текущего `UserRead`, `401` без валидной cookie |
 | `PATCH` | `/users/me` | авторизованный | стандартное обновление пользователя fastapi-users |
 | `POST` | `/auth/account` | авторизованный | обновляет `username` и `email`, возвращает `{message, category, user}` |
@@ -66,7 +75,12 @@ fetch(path, { credentials: 'include', ...init })
 1. принимает `Set-Cookie` от backend;
 2. отправляет подходящие cookies в следующих запросах.
 
-Для текущего frontend и backend это same-origin-сценарий, поэтому запросы используют относительные пути: `/auth/jwt/login`, `/users/me` и т. д.
+Для POST/PUT/PATCH/DELETE общий клиент дополнительно читает не-HttpOnly cookie
+`csrf_token` и передаёт её точное значение в заголовке `X-CSRF-Token`. Это требуется,
+если запрос содержит auth-cookie; чистый Bearer-запрос без auth-cookie заголовок CSRF не
+требует.
+
+Для текущего frontend и backend это same-origin-сценарий, поэтому запросы используют относительные пути: `/auth/cookie/login`, `/users/me` и т. д.
 
 Клиент предоставляет три варианта запроса:
 
@@ -183,7 +197,7 @@ handleSubmit()
 `frontend/src/api/auth.ts::login()` преобразует поле `email` в поле `username`, потому что именно такое имя ожидает стандартный login-router `fastapi-users`:
 
 ```http
-POST /auth/jwt/login
+POST /auth/cookie/login
 Content-Type: application/x-www-form-urlencoded
 
 username=user@example.com&password=password123
@@ -193,16 +207,18 @@ username=user@example.com&password=password123
 
 ### 6.3. Проверка credentials на backend
 
-`fastapi-application/auth_users/router.py` подключает auth-router:
+`fastapi-application/auth_users/router.py` подключает два auth-роутера:
 
 ```python
-fastapi_users.get_auth_router(auth_backend)
+fastapi_users.get_auth_router(cookie_backend)   # prefix="/auth/cookie"
+fastapi_users.get_auth_router(bearer_backend)   # prefix="/auth/bearer"
 ```
 
-`auth_backend` из `fastapi-application/auth_users/auth_backend.py` состоит из двух частей:
+`cookie_backend` и `bearer_backend` из `fastapi-application/auth_users/auth_backend.py` используют единую `JWTStrategy`, но разные транспорты:
 
-- `CookieTransport` — место передачи токена, cookie `auth`;
-- `JWTStrategy` — создание и проверка JWT.
+- `CookieTransport` — для браузера, cookie `auth`;
+- `BearerTransport` — для CLI/мобильных, заголовок `Authorization: Bearer`;
+- `JWTStrategy` — создание и проверка JWT (общая для обоих).
 
 Backend получает `username` и `password`, находит пользователя по email и сравнивает переданный пароль с `hashed_password` из таблицы `user`.
 
@@ -219,21 +235,22 @@ Backend получает `username` и `password`, находит пользов
 ```http
 HTTP/1.1 204 No Content
 Set-Cookie: auth=<JWT>; Max-Age=86400; HttpOnly; SameSite=Lax; Path=/
+Set-Cookie: csrf_token=<nonce>.<signature>; Max-Age=86400; SameSite=Lax; Path=/
 ```
 
-В зависимости от версии библиотеки дополнительные атрибуты cookie могут быть представлены в другом порядке, но смысл тот же.
+В зависимости от версии библиотеки дополнительные атрибуты cookie могут быть представлены в другом порядке, но смысл тот же. Cookie `csrf_token` устанавливается middleware `CSRFMiddleware` (см. раздел 14).
 
 Тело ответа на login пустое: успешный ответ — `204`. JWT не приходит в JSON.
 
 ### 6.5. Что делает браузер
 
-Браузер принимает `Set-Cookie` и сохраняет cookie `auth` для домена приложения. React не вызывает `document.cookie` и не записывает токен вручную.
+Браузер принимает `Set-Cookie` и сохраняет cookie `auth` и `csrf_token` для домена приложения. React не вызывает `document.cookie` для `auth` (она `HttpOnly`), но читает `csrf_token` через `document.cookie` для передачи заголовка `X-CSRF-Token`.
 
 Сразу после успешного `204` функция `login()` делает второй запрос:
 
 ```text
-POST /auth/jwt/login  → 204 + Set-Cookie
-GET  /users/me        → UserRead
+POST /auth/cookie/login  → 204 + Set-Cookie (auth + csrf_token)
+GET  /users/me           → UserRead
 ```
 
 Второй запрос также получает `credentials: 'include'`, поэтому браузер автоматически добавляет:
@@ -280,11 +297,15 @@ user: Annotated[User, Depends(active_user)]
 
 `active_user` выполняет цепочку:
 
-1. `CookieTransport` читает cookie `auth` из входящего запроса;
-2. `JWTStrategy` проверяет подпись, срок действия и данные токена;
+1. `Authenticator` перебирает backend'ы по порядку: сначала `CookieTransport` читает cookie `auth`, затем `BearerTransport` может прочитать `Authorization: Bearer <JWT>`;
+2. общая `JWTStrategy` проверяет подпись, срок действия и данные токена;
 3. по идентификатору пользователя из JWT загружается `User` из базы;
 4. проверяется, что пользователь активен;
 5. dependency передаёт объект `User` в обработчик.
+
+Наличие `Authorization: Bearer` не отменяет CSRF-проверку для state-changing запроса,
+если в нём одновременно присутствует auth-cookie: смешанный cookie+Bearer запрос обязан
+содержать валидный `X-CSRF-Token`.
 
 При успехе backend возвращает `200`:
 
@@ -305,59 +326,66 @@ user: Annotated[User, Depends(active_user)]
 
 Кнопка `Выход` находится в `frontend/src/components/Header.tsx` и вызывает `Layout.handleLogout()`.
 
-Полный поток:
+Полный поток (cookie-транспорт):
 
 ```text
 Header button
     → Layout.handleLogout()
     → api/auth.ts::logout()
-    → POST /auth/jwt/logout
-    → CookieTransport удаляет auth
+    → POST /auth/cookie/logout
+    → CookieTransport удаляет auth, CSRFMiddleware удаляет csrf_token
     → 204
     → setUser(null)
 ```
 
-Запрос:
+Запрос требует заголовок `X-CSRF-Token` (так как присутствует auth-cookie):
 
 ```http
-POST /auth/jwt/logout
+POST /auth/cookie/logout
 Content-Type: application/x-www-form-urlencoded
-Cookie: auth=<JWT>
+Cookie: auth=<JWT>; csrf_token=<nonce>.<signature>
+X-CSRF-Token: <nonce>.<signature>
 ```
 
-Ответ содержит инструкцию удаления cookie, обычно через `Set-Cookie` с истёкшим сроком:
+Ответ содержит инструкцию удаления обеих cookies:
 
 ```http
 HTTP/1.1 204 No Content
 Set-Cookie: auth=; Max-Age=0; ...
+Set-Cookie: csrf_token=; Max-Age=0; ...
 ```
 
-После этого `Layout` сбрасывает объект `user` в React-памяти. При следующем запросе `/users/me` браузер уже не отправляет `auth`, поэтому backend возвращает `401`.
+Для Bearer-транспорта logout отличается: `POST /auth/bearer/logout` возвращает `204` без тела и без CSRF-проверки (stateless), клиент забывает токен сам.
 
-Важно: JWT stateless. Logout удаляет cookie из браузера, но backend не ведёт отдельный список активных JWT и не добавляет токен в blacklist. Если кто-то заранее скопировал JWT, он теоретически останется действительным до истечения срока жизни или смены `secret_key`.
+После cookie-logout `Layout` сбрасывает объект `user` в React-памяти. При следующем запросе `/users/me` браузер уже не отправляет `auth`, поэтому backend возвращает `401`.
+
+Важно: JWT stateless. Cookie-logout удаляет cookie из браузера, но backend не ведёт отдельный список активных JWT и не добавляет токен в blacklist. Если кто-то заранее скопировал JWT, он теоретически останется действительным до истечения срока жизни или смены `secret_key`. Bearer-logout не отзывает токен на сервере — это полностью ответственность клиента.
 
 ## 9. Где именно хранится авторизация
 
 | Что | Где находится | Можно ли прочитать из JavaScript | Назначение |
 |---|---|---:|---|
 | JWT | Cookie браузера `auth` | Нет, `HttpOnly` | подтверждает авторизацию для backend |
+| CSRF-токен | Cookie браузера `csrf_token` | Да (не `HttpOnly`) | защита от CSRF, читается SPA через `document.cookie` |
+| Bearer-токен | память клиента (CLI/мобильное) | зависит от реализации | альтернативный credential для не-браузерных клиентов |
 | cookie-настройки | браузер, атрибуты cookie | частично через DevTools | domain/path/max-age/samesite и т. д. |
 | текущий `User` | память React, `AuthContext.user` | Да | отображение UI и UI guard |
 | JWT в `localStorage` | нигде | — | проект его не использует |
 | JWT в `sessionStorage` | нигде | — | проект его не использует |
 | JWT в таблице `user` | нигде | — | база хранит не JWT, а `hashed_password` |
 | секрет подписи JWT | backend `settings.web.secret_key` | Нет | проверка подписи и создание новых JWT |
+| секрет подписи CSRF | backend `settings.web.secret_key` | Нет | HMAC-SHA256 подпись csrf_token |
 | пользователь | backend БД, таблица `user` | через разрешённые API-поля | загрузка `User` после проверки JWT |
 
 ### Что видно в DevTools
 
-В браузере можно проверить поток в двух местах:
+В браузере можно проверить поток:
 
-1. **Network → `POST /auth/jwt/login` → Response Headers** — увидеть `Set-Cookie`.
-2. **Application/Storage → Cookies → домен приложения** — увидеть cookie `auth` и её атрибуты.
-3. **Network → `GET /users/me` или `/api/v1/auth/protected` → Request Headers** — увидеть, что браузер отправил `Cookie`.
+1. **Network → `POST /auth/cookie/login` → Response Headers** — увидеть `Set-Cookie` для `auth` и `csrf_token`.
+2. **Application/Storage → Cookies → домен приложения** — увидеть cookie `auth` (HttpOnly) и `csrf_token` (не HttpOnly).
+3. **Network → `GET /users/me` или `/api/v1/auth/protected` → Request Headers** — увидеть, что браузер отправил `Cookie`, а фронтенд добавил `X-CSRF-Token` для state-changing запросов.
 
-Значение HttpOnly-cookie не должно читаться приложением через `document.cookie`. Это ожидаемое поведение, а не ошибка frontend.
+Значение HttpOnly-cookie (`auth`) не должно читаться приложением через `document.cookie`. Cookie `csrf_token` намеренно не является `HttpOnly` — SPA читает её для формирования заголовка `X-CSRF-Token`.
 
 ## 10. Конфигурация auth
 

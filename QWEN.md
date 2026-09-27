@@ -9,7 +9,7 @@
 ## Проект — выжимка
 
 Учебно-демонстрационный auth-only шаблон: FastAPI 0.111+ / Python 3.12, авторизация
-`fastapi-users` (CookieTransport + JWTStrategy) поверх демонстрационного API
+`fastapi-users` с CookieTransport и BearerTransport на общей JWTStrategy, Signed Double Submit Cookie CSRF для браузерного потока, поверх демонстрационного API
 (`api/` — Depends и 4 стиля параметров) и домена заказов (`ex_order_product/`,
 `db_core/` — SQLAlchemy 2.0 async + Alembic). Фронтенд — React 18 + TypeScript +
 Vite + Tailwind v4 в `frontend/`; собранный `frontend/dist` раздаётся тем же
@@ -19,12 +19,14 @@ ASGI-приложением (`core/setup_frontend.py`) и не коммитит�
 pydantic-settings, SQLAlchemy 2.0 async (aiosqlite активен), Alembic, uvicorn/
 gunicorn, orjson, React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
 
-**Маршруты:** 23 path-ключа OpenAPI. Top-level `main_app.routes` — 9 объектов:
-4 служебных `Route` + SPA catch-all + `Mount /assets` + три непрозрачных
-`_IncludedRouter` (starlette оборачивает каждый `include_router`). Наивный
-`len(main_app.routes)` не показателен — считайте OpenAPI-пути.
+**Маршруты:** 25 path-ключей OpenAPI. Auth inventory включает `/auth/cookie/login`,
+`/auth/cookie/logout`, `/auth/bearer/login`, `/auth/bearer/logout` и общий
+`/auth/register`; cookie state-changing запросы с auth-cookie требуют `X-CSRF-Token`.
+Top-level `main_app.routes` — 9 объектов: 4 служебных `Route` + SPA catch-all +
+`Mount /assets` + три непрозрачных `_IncludedRouter` (starlette оборачивает каждый
+`include_router`). Наивный `len(main_app.routes)` не показателен — считайте OpenAPI-пути.
 
-Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"` → `23`.
+Проверка: `cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"` → `25`.
 
 **Запуск:** `cd fastapi-application && ../.venv/bin/uvicorn main:main_app --host 0.0.0.0 --port 8000 --reload`. cwd = `fastapi-application/` — SQLite-файл резолвится оттуда.
 
@@ -133,7 +135,8 @@ gunicorn, orjson, React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
    и checkpoint: ruff чист, счётчик маршрутов сходится, лишнего не написано.
 3. qa: запуск из `fastapi-application/`, curl-сценарии из критериев успеха, регресс
    (`/docs`, анонимный `/users/me` → 401, `/orders/get_all_orders?params=id`,
-   один из `/api/v1/dep_examples/*` с заголовком `foobar`, полный auth-цикл).
+   один из `/api/v1/dep_examples/*` с заголовком `foobar`, полный cookie auth-цикл,
+   Bearer login/logout и CSRF-проверки state-changing запросов).
 4. adversary: короткий враждебный прогон → триаж каждой находки.
 5. Пройди критерии успеха один за другим с доказательствами.
 6. Заархивируй задание.

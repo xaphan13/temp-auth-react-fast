@@ -1,7 +1,7 @@
 ---
 name: docs-writer
 description: Автор документации команды агентов. Точечно синхронизирует русскоязычные документы проекта с утверждённым контрактом задания; не меняет код и архитектурные решения.
-model: xkiro/qwen/qwen3.8-max:free
+model: nyxos-auto/glm-5.3-flash
 approvalMode: auto-edit
 tools:
   - read_file

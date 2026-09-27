@@ -11,8 +11,7 @@
 3. Этот документ — карта проекта и документации.
 4. Дальше — точечно по ссылкам ниже.
 
-Факты сверены 2026-09-23 запуском приложения (команды — в конце документа).
-Первоисточник маршрутов — живое приложение (`/openapi.json`), не документы.
+Маршруты и OpenAPI inventory ниже отражают текущий контракт; первоисточник runtime-маршрутов — `/openapi.json`.
 
 ## Проект — выжимка для модели
 
@@ -43,21 +42,21 @@
 `db_core/db_async.py` создаёт engine. SQLite-файл `./one_simple.db` резолвится
 от cwd — приложение и alembic запускать из `fastapi-application/`.
 
-## Инвентарь маршрутов (факт, 2026-09-23)
+## Инвентарь маршрутов (текущий контракт)
 
 | Группа | Пути | Источник |
 |---|---|---|
 | Демо DI | `/api/v1/dep_examples/*` (7 GET) | `api/dependencies/` |
 | Демо 4 стилей параметров | `/api/v1/fastapi_class_old`, `fastapi_class_annotated`, `depends_class_annotated`, `depends_function_annotated` — каждая `my_items/{item_id}` | `api/my_routes_dep/` |
 | Заказы | `/orders/*` — get_all_orders, get_all_join, get_order_where, get_order_filter_by, insert_order, add_order | `ex_order_product/router_order_one.py` |
-| Авторизация | `/auth/jwt/login`, `/auth/jwt/logout`, `/auth/register`, `/auth/account`, `/users/me` (GET+PATCH) | `auth_users/router.py` |
+| Авторизация | `/auth/cookie/login`, `/auth/cookie/logout`, `/auth/bearer/login`, `/auth/bearer/logout`, `/auth/register`, `/auth/account`, `/users/me` (GET+PATCH) | `auth_users/router.py` |
 | Защищённая граница | `GET /api/v1/auth/protected` — требует `active_user` | `auth_users/router.py` |
 | Swagger/OpenAPI | `/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect` | FastAPI |
 | Фронтенд и статика | `/assets/*`, `/{full_path:path}` (SPA catch-all) | `core/setup_frontend.py` |
 
 Счётчики и подводный камень:
 
-- OpenAPI path-ключей — **23**; команда проверки внизу документа.
+- OpenAPI path-ключей — **25**; команда проверки внизу документа.
 - Наивный `len(main_app.routes)` даёт **9** и вводит в заблуждение: starlette 1.6
   оборачивает каждый `include_router` в непрозрачный `_IncludedRouter`, внутри —
   вложенные обёртки. Не считайте это багом и не «чините».
@@ -107,9 +106,10 @@
 | `models.py` | SQLAlchemy-модель пользователя |
 | `schemas.py` | Pydantic-схемы register/update/read |
 | `user_manager.py` | UserManager: валидация пароля (мин. длина из config), жизненный цикл пользователя |
-| `auth_backend.py` | CookieTransport + JWTStrategy, сборка backend |
+| `auth_backend.py` | CookieTransport + BearerTransport + JWTStrategy; `cookie_backend` и `bearer_backend` |
 | `fastapi_users_obj.py` | экземпляр FastAPIUsers и зависимости текущего пользователя (`active_user`) |
-| `router.py` | auth/register-роутеры от fastapi-users + собственный `GET /api/v1/auth/protected` |
+| `router.py` | auth/register-роутеры от fastapi-users (cookie + bearer prefix) + собственный `GET /api/v1/auth/protected` |
+| `csrf.py` | `fastapi-application/auth_users/csrf.py` — `CSRFMiddleware`, защита state-changing cookie-запросов (Signed Double Submit Cookie) |
 | `account.py` | `POST /auth/account` — аккаунт и профиль |
 | `helpers.py` | вспомогательные функции |
 
@@ -120,8 +120,8 @@
 
 - Тестов и pytest — проверка только запуском и curl.
 - Блога, статей, `md_articles/` — нет этого контента в репозитории.
-- Refresh-токенов, email verification, CSRF/CORS-конфигурации — это roadmap
-  (`docs/07` §11, `docs/08` §7, `docs/05`).
+- Refresh-токенов, email verification, CORS-конфигурации — это roadmap
+  (`docs/07` §11, `docs/08` §7, `docs/05`). CSRF-защита реализована в `auth_users/csrf.py`.
 - Отдельного фронтенд-хоста: фронт и API — одно приложение (в dev — Vite-прокси на `:8000`).
 
 ## Графовый индекс (codebase-memory) — статус и границы
@@ -151,7 +151,7 @@ skipped — нет; единственный parse_partial — `nginx/nginx.conf
 
 ```bash
 cd fastapi-application
-../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"   # 23
+../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"   # 25
 ../.venv/bin/uvicorn main:main_app --host 0.0.0.0 --port 8000                                  # cwd = fastapi-application/
 # затем curl: /docs, /orders/get_all_orders, /api/v1/dep_examples/single-direct-dependency,
 # анонимный /users/me -> 401 (ожидаемо); cookie-flow целиком — рецепт в docs/05

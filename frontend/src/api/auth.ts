@@ -1,6 +1,6 @@
 // Функции API авторизации и аккаунта: register, login, logout,
 // getAccount, updateAccount. Backend — fastapi-users:
-// /auth/jwt/login (form, 204), /auth/jwt/logout (form, 204),
+// /auth/cookie/login (form, 204), /auth/cookie/logout (form, 204),
 // /auth/register (JSON, 201), /auth/account (form),
 // /users/me (JSON, 401 для анонима).
 
@@ -12,19 +12,20 @@ export interface MessageResp {
     category: string;
 }
 
-// /auth/jwt/login отвечает 204 — фронт после успешного логина делает
-// refresh через /users/me (возвращает UserRead).
+// /auth/cookie/login отвечает 204 и ставит cookies auth + csrf_token —
+// фронт после успешного логина делает refresh через /users/me (возвращает UserRead).
 export function login(body: { email: string; password: string }): Promise<User> {
     const form = new URLSearchParams({
         username: body.email,
         password: body.password,
     });
-    return postForm<unknown>('/auth/jwt/login', form).then(() => getJson<User>('/users/me'));
+    return postForm<unknown>('/auth/cookie/login', form).then(() => getJson<User>('/users/me'));
 }
 
-// /auth/jwt/logout отвечает 204 — фронт НЕ падает, если logout вернул ошибку.
+// /auth/cookie/logout отвечает 204 и удаляет csrf_token —
+// фронт НЕ падает, если logout вернул ошибку.
 export function logout(): Promise<MessageResp> {
-    return postForm<MessageResp>('/auth/jwt/logout', new URLSearchParams())
+    return postForm<MessageResp>('/auth/cookie/logout', new URLSearchParams())
         .catch(() => ({ message: 'Logged out', category: 'info' }));
 }
 

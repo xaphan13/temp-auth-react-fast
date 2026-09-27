@@ -1,5 +1,6 @@
 import uvicorn
 from api import router_api
+from auth_users.csrf import CSRFMiddleware
 from auth_users.router import router as auth_users_router
 from base_dir_path import BASE_DIR
 from config_log import logF
@@ -13,6 +14,15 @@ logF.info("\n\n\n\n'************************************************************
 
 # load_model_registry()
 main_app = create_app(custom_docs_url=False)
+
+# CSRF-защита cookie-транспорта: Signed Double Submit Cookie (auth_users/csrf.py).
+# Starlette middleware глобален для всего приложения; mount_frontend ниже
+# остаётся последним маршрутизирующим вызовом.
+main_app.add_middleware(
+    CSRFMiddleware,
+    secret_key=settings.web.secret_key,
+    auth_cookie_name=settings.auth_users.cookie_name,
+)
 
 main_app.include_router(router_api)
 main_app.include_router(r_order_one)

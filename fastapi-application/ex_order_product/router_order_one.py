@@ -117,6 +117,10 @@ async def get_all_orders(db: CurrentSession, params: OrderGetAllOrderbyQuery):
     await_result_execute: Result[tuple[Order]] = await db.execute(stmt)
     result_scalars_all: Sequence[Order] = await_result_execute.scalars().all()
 
+    for order in result_scalars_all:
+        if order.promocode is None:
+            order.promocode = ""
+
     return result_scalars_all
 
 

@@ -77,6 +77,7 @@
 | Транспорты/стратегии JWT: cookie vs Bearer vs свой заголовок | `docs/08_jwt_transport_options.md` |
 | Общее пособие по аутентификации и авторизации: методы, протоколы, угрозы и выбор | `docs/09_auth_tutorial.md` |
 | Пособие: Cookie/Bearer и JWT/Database/Redis стратегии с кодом | `docs/10_auth_transport_strategy_tutorial.md` |
+| Как браузер и React получают доступ к API: fetch, cookies, CORS, CSRF и собеседование | `docs/11_frontend_browser_api_csrf.md` |
 
 ## Задача → точка входа в коде
 

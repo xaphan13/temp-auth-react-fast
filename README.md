@@ -113,7 +113,10 @@ Env-файлы лежат в `fastapi-application/` и **закоммичены*
 - [05_authorization_upgrade.md](docs/05_authorization_upgrade.md) — варианты дальнейшего развития auth;
 - [06_auth_visual.md](docs/06_auth_visual.md) — диаграммы связей и рантайм-граф вызовов;
 - [07_auth_token_flow_code.md](docs/07_auth_token_flow_code.md) — где выдаётся JWT, где живёт cookie;
-- [08_jwt_transport_options.md](docs/08_jwt_transport_options.md) — транспорты JWT: cookie / Bearer / свой заголовок.
+- [08_jwt_transport_options.md](docs/08_jwt_transport_options.md) — транспорты JWT: cookie / Bearer / свой заголовок;
+- [09_auth_tutorial.md](docs/09_auth_tutorial.md) — общее учебное пособие по authentication и authorization;
+- [10_auth_transport_strategy_tutorial.md](docs/10_auth_transport_strategy_tutorial.md) — Cookie/Bearer и JWT/Database/Redis стратегии;
+- [11_frontend_browser_api_csrf.md](docs/11_frontend_browser_api_csrf.md) — браузер, React, API, fetch, cookies, CORS и CSRF.
 
 ## Индекс кодовой базы
 

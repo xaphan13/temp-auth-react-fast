@@ -163,12 +163,15 @@ register → login → `/users/me` → `/api/v1/auth/protected` → logout
 | qa | `tasks/current/e2e/`, `tasks/current/DEFECTS.md`, `tasks/current/screenshots/` | curl-сценарии из критериев успеха; регресс: `/docs`, анонимный `/users/me` → 401, `/orders/get_all_orders?params=id`, один из `/api/v1/dep_examples/*`, полный auth-цикл | любой код продукта |
 | adversary | `tasks/current/ADVERSARIAL_REVIEW.md`, `tasks/current/screenshots/` | curl по запущенному приложению; логи `fastapi-application/log/` | всё, кроме своих файлов |
 | spec-writer | `tasks/current/REQUIREMENTS.md` — только на фазе создания, одним `write_file` по шаблону `.qwen/skills/task-spec/TEMPLATE.md` | чек-лист скилла `task-spec` | код продукта; всё, кроме REQUIREMENTS.md на фазе создания |
+| docs-writer | Только явно назначенные markdown-файлы из `docs/` в текущей фазе REQUIREMENTS.md | `git diff --check`; точечный поиск устаревших маршрутов, счётчиков и контрактов; команды checkpoint из фазы | код продукта, `.qwen/`, `tasks/`, `QWEN.md`, `AGENTS.md`, `README.md`, `docs/` вне назначенных файлов |
 
 Общее для всех: не редактировать `.qwen/`, `tasks/current/REQUIREMENTS.md`, папки
 архивных заданий `tasks/NNN-*`, `AGENTS.md`, `QWEN.md`, `README.md`, `docs/`,
-`templates_qwen_agents/`; не добавлять зависимости и тестовые фреймворки без решения
-оркестратора. Единственное исключение: spec-writer на фазе создания. Границы ролей
-обеспечиваются системным промптом каждого агента — не обходите их командами оболочки.
+`templates_qwen_agents/`; исключение для docs-writer — только явно назначенные ему
+файлы из `docs/`, а для spec-writer — только REQUIREMENTS.md на фазе создания.
+Не добавлять зависимости и тестовые фреймворки без решения оркестратора. Границы
+ролей обеспечиваются системным промптом каждого агента — не обходите их командами
+оболочки.
 
 ### Соглашения репозитория агентного режима
 

@@ -121,6 +121,7 @@ gunicorn, orjson, React 18 + TypeScript + Vite + Tailwind v4, ruff + black.
 | backend-dev | `.qwen/agents/backend-dev.md` | Python-модули `fastapi-application/`, миграции |
 | qa | `.qwen/agents/qa.md` | проверка запуском, curl-прогоны, заметки e2e, DEFECTS.md |
 | adversary | `.qwen/agents/adversary.md` | враждебные прогоны, ADVERSARIAL_REVIEW.md |
+| docs-writer | `.qwen/agents/docs-writer.md` | точечная синхронизация назначенной документации с утверждённым контрактом |
 
 Модели ролей задаются в frontmatter `model:` в `.qwen/agents/<роль>.md` — нигде больше.
 

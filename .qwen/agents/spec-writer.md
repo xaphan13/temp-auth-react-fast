@@ -1,7 +1,7 @@
 ---
 name: spec-writer
 description: Автор спецификаций команды. Отдельная сессия фазы создания задания: исследует зону будущего задания и пишет полный tasks/current/REQUIREMENTS.md с планом фаз делегирования по шаблону .qwen/skills/task-spec/TEMPLATE.md. Код продукта не пишет. Используется оркестратором через скилл task-spec ДО любых делегирований разработчикам.
-model: nyxos-auto/glm-5.3-flash
+model: nyxos-auto/claude-sonnet-5
 approvalMode: auto-edit
 tools:
   - read_file

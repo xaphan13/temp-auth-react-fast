@@ -1,0 +1,48 @@
+=== S0a: register phase02@example.com ===
+register: 201
+=== S1: cookie login -> Set-Cookie auth + csrf_token ===
+HTTP/1.1 204 No Content
+set-cookie: auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNWNiODY1NC1kZDczLTQyNGUtYmRlNC0zNTU3OGUzNDQyYzciLCJhdWQiOlsiZmFzdGFwaS11c2VyczphdXRoIl0sImV4cCI6MTc5MDYwMTkxNX0.EyjBNVEcnJL0t-VnhLY4CceqLOvh_y_qoToalDgBTkM; HttpOnly; Max-Age=86400; Path=/; SameSite=lax
+set-cookie: csrf_token=vh84lv9Aav95l224hOSZEivIpBIVNWcuKvvb8HdQl08.3ca4d6f6029a91029ac21716ebb8c4dc407afd6822116ae1ae6cf35997b80198; Max-Age=86400; Path=/; SameSite=lax
+csrf_token from jar: vh84lv9Aav95l224hOSZEivIpBIVNWcuKvvb8HdQ...
+=== S2: GET /users/me with cookie (GET, no CSRF needed) ===
+users/me GET: 200
+=== S3: POST /auth/account, no X-CSRF-Token -> 403 ===
+{"detail":"CSRF validation failed"}
+account no-header: 403
+=== S4: POST /auth/account, tampered token (valid sig of other nonce) -> 403 ===
+{"detail":"CSRF validation failed"}
+account tampered: 403
+=== S4b: POST /auth/account, invalid signature -> 403 ===
+{"detail":"CSRF validation failed"}
+account bad-sig: 403
+=== S5: POST /auth/account, valid X-CSRF-Token -> NOT 403 (reaches endpoint) ===
+{"errors":{"username":["This field is required."],"email":["This field is required."]}}
+account valid: 422
+=== bearer token for mixed scenarios ===
+bearer token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+=== S6: mixed auth-cookie + Bearer, no X-CSRF-Token -> 403 ===
+{"detail":"CSRF validation failed"}
+mixed no-csrf: 403
+=== S7: mixed auth-cookie + Bearer + valid X-CSRF-Token -> NOT 403 ===
+{"errors":{"username":["This field is required."],"email":["This field is required."]}}
+mixed valid-csrf: 422
+=== S8: pure Bearer (no auth-cookie), no X-CSRF-Token -> passes middleware ===
+Internal Server Error
+pure bearer add_order: 500
+=== S9: POST /orders/add_order with cookie, no X-CSRF-Token -> 403 ===
+{"detail":"CSRF validation failed"}
+orders cookie no-csrf: 403
+=== S10: cookie logout with valid X-CSRF-Token -> 204, csrf_token Max-Age=0 ===
+HTTP/1.1 204 No Content
+set-cookie: auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax
+set-cookie: csrf_token=""; expires=Sun, 27 Sep 2026 13:25:15 GMT; Max-Age=0; Path=/; SameSite=lax
+=== S10b: after logout, POST with stale auth cookie + old csrf -> 401 or 403 ===
+{"detail":"Unauthorized"}
+after-logout account: 401
+=== S11: bearer logout, no auth-cookie, no X-CSRF-Token -> 204 ===
+bearer logout: 204
+=== done ===
+=== S8-fix: pure Bearer, valid body, no X-CSRF-Token, no auth-cookie ===
+{"id":2,"created_at":"2026-09-27T13:26:13.633309","promocode":"PHASE02"}
+pure bearer add_order valid body: 200

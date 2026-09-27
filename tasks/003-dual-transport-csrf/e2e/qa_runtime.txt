@@ -1,0 +1,241 @@
+Server PID 1063235, cwd=/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application, port=8017, email=qa1790522011923201140@example.com
+>>> register
+HTTP/1.1 201 Created
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 181
+content-type: application/json
+
+{"id":"abee25e2-dff0-478c-8d2a-69dce4ef3936","email":"qa1790522011923201140@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa179052201192320114"}
+>>> cookie login
+HTTP/1.1 204 No Content
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+set-cookie: auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmVlMjVlMi1kZmYwLTQ3OGMtOGQyYS02OWRjZTRlZjM5MzYiLCJhdWQiOlsiZmFzdGFwaS11c2VyczphdXRoIl0sImV4cCI6MTc5MDYwODQxMn0.tGXHsc7wfOE8ZzVH3YNX5jIpn49ilz_T8RSOw10cllc; HttpOnly; Max-Age=86400; Path=/; SameSite=lax
+set-cookie: csrf_token=tgtaZWpchBBuocPdK-M0aDjTOFTiLuk_q6Zi9HyRiwc.c0f34de85eb8bb60cf183d79b7f57cac77a637a45244d78f34e9db60da9b150d; Max-Age=86400; Path=/; SameSite=lax
+
+csrf=tgtaZWpchBBuocPdK-M0aDjTOFTiLuk_q6Zi9HyRiwc.c0f34de85eb8bb60cf183d79b7f57cac77a637a45244d78f34e9db60da9b150d
+
+>>> bearer login
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 245
+content-type: application/json
+
+{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmVlMjVlMi1kZmYwLTQ3OGMtOGQyYS02OWRjZTRlZjM5MzYiLCJhdWQiOlsiZmFzdGFwaS11c2VyczphdXRoIl0sImV4cCI6MTc5MDYwODQxMn0.tGXHsc7wfOE8ZzVH3YNX5jIpn49ilz_T8RSOw10cllc","token_type":"bearer"}
+>>> cookie GET me
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 181
+content-type: application/json
+
+{"id":"abee25e2-dff0-478c-8d2a-69dce4ef3936","email":"qa1790522011923201140@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa179052201192320114"}
+>>> Bearer GET me
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 181
+content-type: application/json
+
+{"id":"abee25e2-dff0-478c-8d2a-69dce4ef3936","email":"qa1790522011923201140@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa179052201192320114"}
+>>> missing csrf PATCH
+HTTP/1.1 403 Forbidden
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 35
+content-type: application/json
+
+{"detail":"CSRF validation failed"}
+>>> invalid csrf PATCH
+HTTP/1.1 403 Forbidden
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 35
+content-type: application/json
+
+{"detail":"CSRF validation failed"}
+>>> valid csrf PATCH
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 181
+content-type: application/json
+
+{"id":"abee25e2-dff0-478c-8d2a-69dce4ef3936","email":"qa1790522011923201140@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa179052201192320114"}
+>>> mixed without csrf
+HTTP/1.1 403 Forbidden
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 35
+content-type: application/json
+
+{"detail":"CSRF validation failed"}
+>>> mixed valid csrf
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 181
+content-type: application/json
+
+{"id":"abee25e2-dff0-478c-8d2a-69dce4ef3936","email":"qa1790522011923201140@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa179052201192320114"}
+>>> docs
+HTTP 200
+True
+>>> anonymous me
+HTTP/1.1 401 Unauthorized
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}
+>>> orders list
+HTTP/1.1 500 Internal Server Error
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error
+>>> header_name
+HTTP/1.1 404 Not Found
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 22
+content-type: application/json
+
+{"detail":"Not Found"}
+>>> auth/account no csrf
+HTTP/1.1 403 Forbidden
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 35
+content-type: application/json
+
+{"detail":"CSRF validation failed"}
+>>> auth/account valid csrf
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 217
+content-type: application/json
+
+{"message":"Your account has been updated!","category":"success","user":{"id":"abee25e2-dff0-478c-8d2a-69dce4ef3936","username":"qa","email":"qa@example.com","is_active":true,"is_superuser":false,"is_verified":false}}
+>>> orders add no csrf
+HTTP/1.1 403 Forbidden
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 35
+content-type: application/json
+
+{"detail":"CSRF validation failed"}
+>>> orders add valid csrf
+HTTP/1.1 500 Internal Server Error
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error
+>>> bearer logout no csrf
+HTTP/1.1 401 Unauthorized
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}
+>>> protected cookie endpoint
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+content-length: 174
+content-type: application/json
+
+{"authenticated":true,"user":{"id":"abee25e2-dff0-478c-8d2a-69dce4ef3936","email":"qa@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa"}}
+>>> cookie logout
+HTTP/1.1 204 No Content
+date: Sun, 27 Sep 2026 15:13:31 GMT
+server: uvicorn
+set-cookie: auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax
+set-cookie: csrf_token=""; expires=Sun, 27 Sep 2026 15:13:32 GMT; Max-Age=0; Path=/; SameSite=lax
+
+>>> cookies after logout
+# Netscape HTTP Cookie File
+# https://curl.se/docs/http-cookies.html
+# This file was generated by libcurl! Edit at your own risk.
+
+
+=== TARGETED FOLLOW-UP: valid order body and authenticated bearer logout ===
+>>> cookie login for targeted checks
+HTTP/1.1 400 Bad Request
+date: Sun, 27 Sep 2026 15:15:41 GMT
+server: uvicorn
+content-length: 34
+content-type: application/json
+
+{"detail":"LOGIN_BAD_CREDENTIALS"}csrf=
+>>> order add valid body without csrf
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:15:41 GMT
+server: uvicorn
+content-length: 67
+content-type: application/json
+
+{"id":4,"created_at":"2026-09-27T15:15:42.010685","promocode":"QA"}>>> order add valid body with csrf
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:15:41 GMT
+server: uvicorn
+content-length: 67
+content-type: application/json
+
+{"id":5,"created_at":"2026-09-27T15:15:42.035194","promocode":"QA"}>>> bearer login
+{"detail":"LOGIN_BAD_CREDENTIALS"}bash: строка 1: ../.venv/bin/python: Нет такого файла или каталога
+
+>>> bearer logout with Authorization, no cookie and no csrf
+HTTP/1.1 401 Unauthorized
+date: Sun, 27 Sep 2026 15:15:41 GMT
+server: uvicorn
+content-length: 25
+content-type: application/json
+
+{"detail":"Unauthorized"}
+=== TARGETED FOLLOW-UP 2 email=qa1790522240723798974@example.com ===
+>>> register
+HTTP/1.1 201 Created
+date: Sun, 27 Sep 2026 15:17:21 GMT
+server: uvicorn
+content-length: 181
+content-type: application/json
+
+{"id":"869b2cba-6c2d-4123-bcb9-47dc6180c46b","email":"qa1790522240723798974@example.com","is_active":true,"is_superuser":false,"is_verified":false,"username":"qa179052224072379897"}>>> cookie login
+HTTP/1.1 204 No Content
+date: Sun, 27 Sep 2026 15:17:21 GMT
+server: uvicorn
+set-cookie: auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NjliMmNiYS02YzJkLTQxMjMtYmNiOS00N2RjNjE4MGM0NmIiLCJhdWQiOlsiZmFzdGFwaS11c2VyczphdXRoIl0sImV4cCI6MTc5MDYwODY0Mn0.cOXz1B0HEAzVz4EhyoxGazoDOkcWiBIkgLLRX28y6iE; HttpOnly; Max-Age=86400; Path=/; SameSite=lax
+set-cookie: csrf_token=x5o04lN7xKRF6d21bqvjNTJYoK31YxYYYdsViXtPd7g.c3637018b5627ee3cabdf22f68880ff69c252583d22d3c455f3819b7ed9d05a3; Max-Age=86400; Path=/; SameSite=lax
+
+csrf=x5o04lN7xKRF6d21bqvjNTJYoK31YxYYYdsViXtPd7g.c3637018b5627ee3cabdf22f68880ff69c252583d22d3c455f3819b7ed9d05a3
+>>> order valid body without csrf
+HTTP/1.1 403 Forbidden
+date: Sun, 27 Sep 2026 15:17:21 GMT
+server: uvicorn
+content-length: 35
+content-type: application/json
+
+{"detail":"CSRF validation failed"}>>> order valid body with csrf
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:17:21 GMT
+server: uvicorn
+content-length: 67
+content-type: application/json
+
+{"id":6,"created_at":"2026-09-27T15:17:22.144442","promocode":"QA"}>>> bearer login
+{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NjliMmNiYS02YzJkLTQxMjMtYmNiOS00N2RjNjE4MGM0NmIiLCJhdWQiOlsiZmFzdGFwaS11c2VyczphdXRoIl0sImV4cCI6MTc5MDYwODY0Mn0.cOXz1B0HEAzVz4EhyoxGazoDOkcWiBIkgLLRX28y6iE","token_type":"bearer"}
+>>> bearer logout with Authorization, no cookie and no csrf
+HTTP/1.1 204 No Content
+date: Sun, 27 Sep 2026 15:17:21 GMT
+server: uvicorn
+

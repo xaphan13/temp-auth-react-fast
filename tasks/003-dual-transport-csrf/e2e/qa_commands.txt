@@ -1,0 +1,279 @@
+=== OpenAPI count and schemes ===
+paths= 25
+schemes= {"APIKeyCookie": {"in": "cookie", "name": "auth", "type": "apiKey"}, "OAuth2PasswordBearer": {"flows": {"password": {"scopes": {}, "tokenUrl": "/auth/bearer/login"}}, "type": "oauth2"}}
+=== frontend npm run build ===
+
+> frontend@0.0.1 build
+> tsc && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 42 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.64 kB │ gzip:  0.42 kB
+dist/assets/index-C2uD5gh2.css    8.03 kB │ gzip:  2.54 kB
+dist/assets/index-Di_rNHxW.js   179.75 kB │ gzip: 58.59 kB
+✓ built in 1.54s
+build_exit=0 index_html_exit=0
+=== backend ruff check ===
+I001 [*] Import block is un-sorted or un-formatted
+  --> auth_users/user_manager.py:12:1
+   |
+10 |   """
+11 |
+12 | / from collections.abc import AsyncGenerator
+13 | | from typing import Annotated, Any
+14 | | from uuid import UUID
+15 | |
+16 | | from fastapi_users.models import UserProtocol
+17 | |
+18 | | from config_log import logF
+19 | | from core.config import settings
+20 | | from db_core.db_async import CurrentSession
+21 | | from fastapi import Depends, Request
+22 | | from fastapi_users import BaseUserManager, UUIDIDMixin
+23 | | from fastapi_users.db import SQLAlchemyUserDatabase
+24 | | from fastapi_users.exceptions import InvalidPasswordException, UserAlreadyExists
+25 | | from sqlalchemy.exc import IntegrityError
+26 | | from sqlalchemy.ext.asyncio import AsyncSession
+27 | |
+28 | | from auth_users.models import User
+   | |__________________________________^
+help: Organize imports
+   |
+15 |
+   - from fastapi_users.models import UserProtocol
+   -
+16 | from config_log import logF
+--------------------------------------------------------------------------------
+22 | from fastapi_users.exceptions import InvalidPasswordException, UserAlreadyExists
+23 + from fastapi_users.models import UserProtocol
+24 | from sqlalchemy.exc import IntegrityError
+   |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
+ruff_exit=1
+=== focused I001 baseline file ===
+I001 [*] Import block is un-sorted or un-formatted
+  --> auth_users/user_manager.py:12:1
+   |
+10 |   """
+11 |
+12 | / from collections.abc import AsyncGenerator
+13 | | from typing import Annotated, Any
+14 | | from uuid import UUID
+15 | |
+16 | | from fastapi_users.models import UserProtocol
+17 | |
+18 | | from config_log import logF
+19 | | from core.config import settings
+20 | | from db_core.db_async import CurrentSession
+21 | | from fastapi import Depends, Request
+22 | | from fastapi_users import BaseUserManager, UUIDIDMixin
+23 | | from fastapi_users.db import SQLAlchemyUserDatabase
+24 | | from fastapi_users.exceptions import InvalidPasswordException, UserAlreadyExists
+25 | | from sqlalchemy.exc import IntegrityError
+26 | | from sqlalchemy.ext.asyncio import AsyncSession
+27 | |
+28 | | from auth_users.models import User
+   | |__________________________________^
+help: Organize imports
+   |
+15 |
+   - from fastapi_users.models import UserProtocol
+   -
+16 | from config_log import logF
+--------------------------------------------------------------------------------
+22 | from fastapi_users.exceptions import InvalidPasswordException, UserAlreadyExists
+23 + from fastapi_users.models import UserProtocol
+24 | from sqlalchemy.exc import IntegrityError
+   |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
+focused_exit=1
+=== logs ===
+--- /home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/log/temp_auth.log
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:///one_simple.db')
+/* 2026-09-27 16:25:15,113 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e4aeb4d0>
+/* 2026-09-27 16:25:15,241 - user_manager.on_after_register(83) - [MainThread] - [123252322162496] */  
+INFO: auth_users: registered phase02@example.com
+/* 2026-09-27 16:25:15,253 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e498e2a0>
+/* 2026-09-27 16:25:15,359 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e498e870>
+/* 2026-09-27 16:25:15,399 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e4a0c320>
+/* 2026-09-27 16:25:15,411 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e4a0c6e0>
+/* 2026-09-27 16:25:15,519 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e4a0d490>
+/* 2026-09-27 16:25:15,573 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e498ef60>
+/* 2026-09-27 16:25:15,591 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e4a0deb0>
+/* 2026-09-27 16:25:15,602 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e4a0dd30>
+/* 2026-09-27 16:26:13,516 - user_manager.get_user_manager(98) - [MainThread] - [123252322162496] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x7018e4a0e780>
+/* 2026-09-27 18:07:53,467 - main.<module>(12) - [MainThread] - [128122835593024] */  
+INFO: 
+
+
+
+'**************************************************************************'
+/* 2026-09-27 18:07:53,503 - setup_frontend.mount_frontend(41) - [MainThread] - [128122835593024] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-27 18:07:53,522 - create_fastapi.lifespan(25) - [MainThread] - [128122835593024] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:///one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-27 18:07:53,523 - create_fastapi.lifespan(27) - [MainThread] - [128122835593024] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:///one_simple.db')
+/* 2026-09-27 18:13:31,718 - main.<module>(12) - [MainThread] - [124185281165120] */  
+INFO: 
+
+
+
+'**************************************************************************'
+/* 2026-09-27 18:13:31,750 - setup_frontend.mount_frontend(41) - [MainThread] - [124185281165120] */  
+INFO: SPA подключена: index=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/index.html, assets=/home/max/0_0_26_new_one/temp-auth-react-fast/frontend/dist/assets
+/* 2026-09-27 18:13:31,770 - create_fastapi.lifespan(25) - [MainThread] - [124185281165120] */  
+INFO: startup lifespan :
+settings.db.url=SqliteDsn('sqlite+aiosqlite:///one_simple.db') 
+app.title='Example : Fast API - SQL - React'
+/* 2026-09-27 18:13:31,770 - create_fastapi.lifespan(27) - [MainThread] - [124185281165120] */  
+WARNING: used test sqlite dataBase : settings.db.url=SqliteDsn('sqlite+aiosqlite:///one_simple.db')
+/* 2026-09-27 18:13:31,931 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d447860>
+/* 2026-09-27 18:13:32,071 - user_manager.on_after_register(83) - [MainThread] - [124185281165120] */  
+INFO: auth_users: registered qa1790522011923201140@example.com
+/* 2026-09-27 18:13:32,086 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d507bf0>
+/* 2026-09-27 18:13:32,226 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d508140>
+/* 2026-09-27 18:13:32,395 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d5086b0>
+/* 2026-09-27 18:13:32,408 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d508050>
+/* 2026-09-27 18:13:32,438 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d50a3c0>
+/* 2026-09-27 18:13:32,462 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d509910>
+/* 2026-09-27 18:13:32,499 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d50a000>
+/* 2026-09-27 18:13:32,508 - router_order_one.get_all_orders(113) - [MainThread] - [124185281165120] */  
+INFO: get_all_orders : type(order_by_list_o)=<class 'list'>
+order_by_list_o=[<sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x70f21fa5f9c0>, <sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x70f21fa5fa60>]
+/* 2026-09-27 18:13:32,543 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d5098b0>
+/* 2026-09-27 18:13:32,600 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21c3c8860>
+/* 2026-09-27 18:13:32,656 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21f91be00>
+/* 2026-09-27 18:13:32,666 - user_manager.get_user_manager(98) - [MainThread] - [124185281165120] */  
+DEBUG: get_user_manager <fastapi_users_db_sqlalchemy.SQLAlchemyUserDatabase object at 0x70f21d5be660>
+=== server log ===
+2026-09-27 18:13:32,547 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.email = ?
+2026-09-27 18:13:32,547 INFO sqlalchemy.engine.Engine [generated in 0.00016s] ('qa@example.com',)
+2026-09-27 18:13:32,550 INFO sqlalchemy.engine.Engine UPDATE user SET username=?, email=? WHERE user.id = ?
+2026-09-27 18:13:32,550 INFO sqlalchemy.engine.Engine [generated in 0.00034s] ('qa', 'qa@example.com', 'abee25e2-dff0-478c-8d2a-69dce4ef3936')
+2026-09-27 18:13:32,551 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:49054 - "POST /auth/account HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49058 - "POST /orders/add_order HTTP/1.1" 403 Forbidden
+2026-09-27 18:13:32,582 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 18:13:32,583 INFO sqlalchemy.engine.Engine INSERT INTO orders (created_at, promocode) VALUES (?, ?) RETURNING id
+2026-09-27 18:13:32,583 INFO sqlalchemy.engine.Engine [generated in 0.00019s] ('2026-09-27 15:13:32.583161', None)
+2026-09-27 18:13:32,584 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-27 18:13:32,588 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 18:13:32,589 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.created_at, orders.promocode 
+FROM orders 
+WHERE orders.id = ?
+2026-09-27 18:13:32,589 INFO sqlalchemy.engine.Engine [generated in 0.00014s] (3,)
+2026-09-27 18:13:32,589 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49068 - "POST /orders/add_order HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/auth_users/csrf.py", line 132, in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 727, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 324, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation error:
+  {'type': 'string_type', 'loc': ('response', 'promocode'), 'msg': 'Input should be a valid string', 'input': None}
+
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/ex_order_product/router_order_one.py", line 35, in add_order
+    POST /orders/add_order
+INFO:     127.0.0.1:49078 - "POST /auth/bearer/logout HTTP/1.1" 401 Unauthorized
+2026-09-27 18:13:32,657 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 18:13:32,657 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-27 18:13:32,657 INFO sqlalchemy.engine.Engine [cached since 0.2598s ago] ('abee25e2-dff0-478c-8d2a-69dce4ef3936',)
+INFO:     127.0.0.1:49090 - "GET /api/v1/auth/protected HTTP/1.1" 200 OK
+2026-09-27 18:13:32,658 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-27 18:13:32,667 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 18:13:32,667 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-27 18:13:32,667 INFO sqlalchemy.engine.Engine [cached since 0.2703s ago] ('abee25e2-dff0-478c-8d2a-69dce4ef3936',)
+INFO:     127.0.0.1:49102 - "POST /auth/cookie/logout HTTP/1.1" 204 No Content
+2026-09-27 18:13:32,668 INFO sqlalchemy.engine.Engine ROLLBACK

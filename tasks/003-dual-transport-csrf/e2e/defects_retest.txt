@@ -1,0 +1,31 @@
+=== Ретест DEF-001 и DEF-002 оркестратором (2026-09-27) ===
+
+Сервер: uvicorn main:main_app --host 127.0.0.1 --port 8042/8043/8044, cwd=fastapi-application/
+
+=== DEF-001: header_name ===
+curl -s -i -H 'foobar: testvalue' http://127.0.0.1:8042/api/v1/dep_examples/header_name
+HTTP/1.1 200 OK
+content-type: application/json
+{"foobar":"testvalue","message":"header foobar"}
+Вердикт: PASS — маршрут доступен runtime, возвращает 200 с упоминанием foobar.
+
+=== DEF-002: get_all_orders ===
+curl -s -i 'http://127.0.0.1:8042/orders/get_all_orders?params=id'
+HTTP/1.1 200 OK
+content-type: application/json
+[{"id":1,"created_at":"2026-09-27T13:25:15.533478","promocode":""},{"id":2,...,"promocode":"PHASE02"},...,{"id":6,...,"promocode":"QA"}]
+Вердикт: PASS — 200 JSON list, promocode=None сериализуется как "".
+
+=== OpenAPI count и schemes ===
+paths: 25
+header_name in schema: False
+schemes: ['APIKeyCookie', 'OAuth2PasswordBearer']
+Вердикт: PASS — OpenAPI 25, header_name скрыт (include_in_schema=False), обе security schemes присутствуют.
+
+=== Auth smoke (порт 8043) ===
+register: 201
+cookie_login: 204
+patch_no_csrf: 403
+patch_valid_csrf: 200
+bearer_login: 200
+Вердикт: PASS — dual transport и CSRF middleware работают корректно.

@@ -1,0 +1,30 @@
+WHERE user.id = ?
+2026-09-27 16:25:15,574 INFO sqlalchemy.engine.Engine [cached since 0.2131s ago] ('e5cb8654-dd73-424e-bde4-35578e3442c7',)
+INFO:     127.0.0.1:46328 - "POST /auth/cookie/logout HTTP/1.1" 204 No Content
+2026-09-27 16:25:15,576 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:46340 - "POST /auth/account HTTP/1.1" 401 Unauthorized
+2026-09-27 16:25:15,603 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:25:15,603 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-27 16:25:15,603 INFO sqlalchemy.engine.Engine [cached since 0.2423s ago] ('e5cb8654-dd73-424e-bde4-35578e3442c7',)
+INFO:     127.0.0.1:46346 - "POST /auth/bearer/logout HTTP/1.1" 204 No Content
+2026-09-27 16:25:15,605 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-27 16:26:13,517 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:26:13,517 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE lower(user.email) = lower(?)
+2026-09-27 16:26:13,518 INFO sqlalchemy.engine.Engine [cached since 58.39s ago] ('phase02@example.com',)
+INFO:     127.0.0.1:39926 - "POST /auth/bearer/login HTTP/1.1" 200 OK
+2026-09-27 16:26:13,621 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-27 16:26:13,632 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:26:13,633 INFO sqlalchemy.engine.Engine INSERT INTO orders (created_at, promocode) VALUES (?, ?) RETURNING id
+2026-09-27 16:26:13,633 INFO sqlalchemy.engine.Engine [cached since 58.1s ago] ('2026-09-27 13:26:13.633309', 'PHASE02')
+2026-09-27 16:26:13,634 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-27 16:26:13,638 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:26:13,639 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.created_at, orders.promocode 
+FROM orders 
+WHERE orders.id = ?
+2026-09-27 16:26:13,639 INFO sqlalchemy.engine.Engine [cached since 58.1s ago] (2,)
+INFO:     127.0.0.1:39936 - "POST /orders/add_order HTTP/1.1" 200 OK
+2026-09-27 16:26:13,640 INFO sqlalchemy.engine.Engine ROLLBACK

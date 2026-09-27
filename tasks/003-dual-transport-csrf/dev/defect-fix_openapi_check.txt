@@ -1,0 +1,3 @@
+openapi_paths_count: 25
+header_name_in_schema: False (as required)
+VERIFY OK

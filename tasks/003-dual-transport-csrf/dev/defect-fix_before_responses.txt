@@ -1,0 +1,16 @@
+GET /orders/get_all_orders?params=id
+HTTP/1.1 500 Internal Server Error
+date: Sun, 27 Sep 2026 15:34:41 GMT
+server: uvicorn
+content-length: 21
+content-type: text/plain; charset=utf-8
+
+Internal Server Error
+GET /api/v1/dep_examples/header_name
+HTTP/1.1 200 OK
+date: Sun, 27 Sep 2026 15:34:41 GMT
+server: uvicorn
+content-length: 48
+content-type: application/json
+
+{"foobar":"testvalue","message":"header foobar"}curl_status=0

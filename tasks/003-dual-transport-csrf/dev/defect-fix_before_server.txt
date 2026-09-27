@@ -1,0 +1,83 @@
+INFO:     Started server process [1073633]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8027 (Press CTRL+C to quit)
+2026-09-27 18:34:41,976 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 18:34:41,986 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.created_at, orders.promocode 
+FROM orders ORDER BY orders.id, orders.created_at
+2026-09-27 18:34:41,986 INFO sqlalchemy.engine.Engine [generated in 0.00022s] ()
+2026-09-27 18:34:41,988 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:33336 - "GET /orders/get_all_orders?params=id HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/auth_users/csrf.py", line 132, in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 727, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 324, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 2 validation errors:
+  {'type': 'string_type', 'loc': ('response', 0, 'promocode'), 'msg': 'Input should be a valid string', 'input': None}
+  {'type': 'string_type', 'loc': ('response', 2, 'promocode'), 'msg': 'Input should be a valid string', 'input': None}
+
+  File "/home/max/0_0_26_new_one/temp-auth-react-fast/fastapi-application/ex_order_product/router_order_one.py", line 104, in get_all_orders
+    GET /orders/get_all_orders
+/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py:144: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+  response = await f(request)
+INFO:     127.0.0.1:33350 - "GET /api/v1/dep_examples/header_name HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1073633]

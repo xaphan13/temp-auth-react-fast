@@ -1,0 +1,64 @@
+INFO:     Started server process [1001310]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-09-27 16:12:35,121 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:12:35,132 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE lower(user.email) = lower(?)
+2026-09-27 16:12:35,132 INFO sqlalchemy.engine.Engine [generated in 0.00024s] ('phase01@example.com',)
+2026-09-27 16:12:35,255 INFO sqlalchemy.engine.Engine INSERT INTO user (username, created_at, id, email, hashed_password, is_active, is_superuser, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-27 16:12:35,255 INFO sqlalchemy.engine.Engine [generated in 0.00035s] (None, '2026-09-27 13:12:35.255362', '882032ed-dee3-43db-9669-ec82494c9783', 'phase01@example.com', '$argon2id$v=19$m=65536,t=3,p=4$Eb9JOBkx7grxisdmn+volg$ZCJgrwGYRo4ESEB0gJEzvO7oOlb3TPHxRrMsvJ/ZLQg', 1, 0, 0)
+2026-09-27 16:12:35,260 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-27 16:12:35,265 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:12:35,266 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-27 16:12:35,266 INFO sqlalchemy.engine.Engine [generated in 0.00014s] ('882032ed-dee3-43db-9669-ec82494c9783',)
+2026-09-27 16:12:35,268 INFO sqlalchemy.engine.Engine UPDATE user SET username=? WHERE user.id = ?
+2026-09-27 16:12:35,268 INFO sqlalchemy.engine.Engine [generated in 0.00017s] ('phase01', '882032ed-dee3-43db-9669-ec82494c9783')
+2026-09-27 16:12:35,269 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-27 16:12:35,273 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:12:35,274 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-27 16:12:35,274 INFO sqlalchemy.engine.Engine [cached since 0.007789s ago] ('882032ed-dee3-43db-9669-ec82494c9783',)
+/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py:144: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+  response = await f(request)
+INFO:     127.0.0.1:33956 - "POST /auth/register HTTP/1.1" 201 Created
+2026-09-27 16:12:35,276 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-27 16:12:35,302 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:12:35,303 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE lower(user.email) = lower(?)
+2026-09-27 16:12:35,303 INFO sqlalchemy.engine.Engine [cached since 0.1706s ago] ('phase01@example.com',)
+INFO:     127.0.0.1:33960 - "POST /auth/cookie/login HTTP/1.1" 204 No Content
+2026-09-27 16:12:35,431 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-27 16:12:35,442 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:12:35,442 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE lower(user.email) = lower(?)
+2026-09-27 16:12:35,442 INFO sqlalchemy.engine.Engine [cached since 0.3101s ago] ('phase01@example.com',)
+INFO:     127.0.0.1:33966 - "POST /auth/bearer/login HTTP/1.1" 200 OK
+2026-09-27 16:12:35,582 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-27 16:12:35,591 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:12:35,591 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE lower(user.email) = lower(?)
+2026-09-27 16:12:35,591 INFO sqlalchemy.engine.Engine [cached since 0.4592s ago] ('phase01@example.com',)
+2026-09-27 16:12:35,715 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:33970 - "POST /auth/bearer/login HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:33978 - "POST /auth/jwt/login HTTP/1.1" 405 Method Not Allowed
+2026-09-27 16:12:35,745 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-27 16:12:35,746 INFO sqlalchemy.engine.Engine SELECT user.username, user.created_at, user.id, user.email, user.hashed_password, user.is_active, user.is_superuser, user.is_verified 
+FROM user 
+WHERE user.id = ?
+2026-09-27 16:12:35,746 INFO sqlalchemy.engine.Engine [generated in 0.00022s] ('882032ed-dee3-43db-9669-ec82494c9783',)
+/home/max/0_0_26_new_one/temp-auth-react-fast/.venv/lib/python3.12/site-packages/fastapi/routing.py:144: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+  response = await f(request)
+INFO:     127.0.0.1:33994 - "GET /users/me HTTP/1.1" 200 OK
+2026-09-27 16:12:35,747 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1001310]

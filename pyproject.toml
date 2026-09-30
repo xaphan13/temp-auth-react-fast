@@ -40,6 +40,8 @@ ignore = [
 line-length = 100
 indent-width = 4
 exclude = [
+    "tasks",
+    "docs",
     ".git",
     ".mypy_cache",
     ".ruff_cache",

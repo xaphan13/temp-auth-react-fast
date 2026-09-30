@@ -5,11 +5,13 @@ from base_dir_path import BASE_DIR
 from config_log import logF
 from core.config import settings
 from core.create_fastapi import create_app
-from ex_order_product.router_order_one import r_order_one
 from core.setup_frontend import mount_frontend
+from ex_order_product.router_order_one import r_order_one
+
+logF.info("\n\n\n\n'**************************************************************************'")
+
 
 # load_model_registry()
-
 main_app = create_app(custom_docs_url=False)
 
 main_app.include_router(router_api)
@@ -29,11 +31,6 @@ def main() -> None:
         host=settings.run.host,
         port=settings.run.port,
         reload=True,
-    )
-
-    logF.warning(
-        "end '-----------------------------' my-fastapi-one '----------------------------' \n\n\n\n"
-        "'********************************************************************************'"
     )
 
 

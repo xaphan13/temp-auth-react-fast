@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Annotated
 
 from config_log import logF
 from core.config import settings
@@ -56,7 +57,7 @@ async def insert_order(db: CurrentSession, body: OrderCreateBody):
 #                    get Orders - with condition                       #
 # ==================================================================== #
 @r_order_one.get("/get_order_filter_by", response_model=OrderResp)
-async def get_order_filter_by(db: CurrentSession, params: OrderGetQuery = Depends()):
+async def get_order_filter_by(db: CurrentSession, params: Annotated[OrderGetQuery, Depends()]):
     # stmt: Select[tuple[Order]] = select(Order).filter_by(id=22)
     filter_where = {key: value for key, value in params.model_dump().items() if value is not None}
 
@@ -75,7 +76,7 @@ async def get_order_filter_by(db: CurrentSession, params: OrderGetQuery = Depend
 
 
 @r_order_one.get("/get_order_where", response_model=OrderResp | list[OrderResp])
-async def get_order_where(db: CurrentSession, params: OrderGetQuery = Depends()):
+async def get_order_where(db: CurrentSession, params: Annotated[OrderGetQuery, Depends()]):
     # stmt = select(Order).where(Order.id == 22)
     filter_where = [
         getattr(Order, key) == value for key, value in params.model_dump(exclude_none=True).items()

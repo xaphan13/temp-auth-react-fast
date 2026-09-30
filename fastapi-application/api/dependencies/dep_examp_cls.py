@@ -6,7 +6,6 @@ from .cls_deps import (
     TokenIntrospectResult,
     access_required,
 )
-
 from .helper import GreatHelper, GreatService, get_great_helper
 
 router_dep_cls = APIRouter()

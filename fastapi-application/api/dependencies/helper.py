@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Header, Depends
+from fastapi import Depends, Header
 
 
 def get_header_dependency(header_name: str, default_value: str = ""):

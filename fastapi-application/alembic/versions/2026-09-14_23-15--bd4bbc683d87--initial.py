@@ -6,17 +6,18 @@ Create Date: 2026-09-14 23:15:53.736630
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import fastapi_users_db_sqlalchemy
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "bd4bbc683d87"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -47,9 +48,7 @@ def upgrade() -> None:
         "user",
         sa.Column("username", sa.String(length=20), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column(
-            "id", fastapi_users_db_sqlalchemy.generics.GUID(), nullable=False
-        ),
+        sa.Column("id", fastapi_users_db_sqlalchemy.generics.GUID(), nullable=False),
         sa.Column("email", sa.String(length=320), nullable=False),
         sa.Column("hashed_password", sa.String(length=1024), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False),
@@ -62,9 +61,7 @@ def upgrade() -> None:
     op.create_table(
         "order_product_association",
         sa.Column("count", sa.Integer(), server_default="1", nullable=True),
-        sa.Column(
-            "unit_price", sa.Integer(), server_default="0", nullable=True
-        ),
+        sa.Column("unit_price", sa.Integer(), server_default="0", nullable=True),
         sa.Column("order_id", sa.Integer(), nullable=False),
         sa.Column("product_id", sa.Integer(), nullable=False),
         sa.Column("id", sa.Integer(), nullable=False),
@@ -80,12 +77,8 @@ def upgrade() -> None:
             name=op.f("fk_order_product_association_product_id_products"),
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint(
-            "id", name=op.f("pk_order_product_association")
-        ),
-        sa.UniqueConstraint(
-            "order_id", "product_id", name="idx_unique_order_product"
-        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_order_product_association")),
+        sa.UniqueConstraint("order_id", "product_id", name="idx_unique_order_product"),
     )
     op.create_index(
         op.f("ix_order_product_association_id"),

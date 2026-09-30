@@ -10,7 +10,10 @@ settings.auth_users.password_min_length и правка одной строки 
 """
 
 from collections.abc import AsyncGenerator
+from typing import Annotated, Any
 from uuid import UUID
+
+from fastapi_users.models import UserProtocol
 
 from config_log import logF
 from core.config import settings
@@ -49,7 +52,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
         user_create,
         safe: bool = False,
         request: Request | None = None,
-    ) -> User:
+    ) -> UserProtocol[Any]:
         """Перехватывает race-condition на дубликате email/username.
 
         Стандартный `BaseUserManager.create` вызывает `email_exists` для
@@ -88,9 +91,12 @@ async def get_user_db(
 
 
 async def get_user_manager(
-    user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
+    # user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
+    user_db: Annotated[SQLAlchemyUserDatabase, Depends(get_user_db)],
 ) -> AsyncGenerator[UserManager, None]:
     """DI: UserManager, получающий user_db из get_user_db."""
+    logF.debug("get_user_manager %s", user_db)
+
     yield UserManager(user_db)
 
 

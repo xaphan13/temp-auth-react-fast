@@ -117,6 +117,7 @@ Env-файлы лежат в `fastapi-application/` и **закоммичены*
 - [09_auth_tutorial.md](docs/09_auth_tutorial.md) — общее учебное пособие по authentication и authorization;
 - [10_auth_transport_strategy_tutorial.md](docs/10_auth_transport_strategy_tutorial.md) — Cookie/Bearer и JWT/Database/Redis стратегии;
 - [11_frontend_browser_api_csrf.md](docs/11_frontend_browser_api_csrf.md) — браузер, React, API, fetch, cookies, CORS и CSRF.
+- [12_auth_dual_transport_walkthrough.md](docs/12_auth_dual_transport_walkthrough.md) — живой разбор browser Cookie и client Bearer потоков, CSRF, Mermaid и curl.
 
 ## Индекс кодовой базы
 
@@ -130,7 +131,7 @@ Env-файлы лежат в `fastapi-application/` и **закоммичены*
 
 ```bash
 uv run ruff check .                                                        # линтер (ruff в зависимостях)
-cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"   # 23 path-ключа OpenAPI
+cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"   # 25 path-ключей OpenAPI
 cd fastapi-application && ../.venv/bin/uvicorn main:main_app --port 8000    # затем curl /docs, /users/me (401 без cookie), /orders/get_all_orders, /
 ```
 

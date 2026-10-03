@@ -21,6 +21,7 @@ import hashlib
 import hmac
 import secrets
 
+from config_log import logF
 from core.config import settings
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -126,7 +127,22 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Проверка ДО call_next: logout при наличии auth-cookie обязан пройти
         # обычную CSRF-проверку, login её не требует (auth-cookie ещё нет).
-        if self._requires_check(request) and not self._check_request(request):
+        required = self._requires_check(request)
+        csrf_valid = self._check_request(request) if required else None
+        # Логируем только факты решения, без значений cookie и токена.
+        logF.debug(
+            "auth csrf: method=%s path=%s required=%s valid=%s",
+            request.method,
+            request.url.path,
+            required,
+            csrf_valid,
+        )
+        if required and not csrf_valid:
+            logF.warning(
+                "auth csrf: rejected method=%s path=%s",
+                request.method,
+                request.url.path,
+            )
             return JSONResponse({"detail": ERROR_DETAIL}, status_code=403)
 
         response = await call_next(request)
@@ -135,10 +151,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         if path == COOKIE_LOGIN_PATH and response.status_code == 204:
             self._set_token_cookie(response)
-        elif (
-            path == COOKIE_LOGOUT_PATH
-            and response.status_code < 400
-        ):
+            logF.info("auth csrf: issued csrf_token cookie path=%s", path)
+        elif path == COOKIE_LOGOUT_PATH and response.status_code < 400:
             self._delete_token_cookie(response)
+            logF.info("auth csrf: deleted csrf_token cookie path=%s", path)
 
         return response

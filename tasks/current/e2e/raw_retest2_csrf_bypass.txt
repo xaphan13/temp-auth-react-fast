@@ -1,0 +1,18 @@
+=== Ретест 2b: CSRF-обход с валидной сессией (после шага 11 сессия была завершена — 405 до роута) ===
+EMAIL=qa_92711581@example.com
+--- свежий cookie login ---
+login -> 204
+csrf_len=108
+--- B2. Валидная сессия, поддельный X-CSRF-Token на /auth/cookie/logout -> ожидаем 403 ---
+fake-csrf logout -> 403
+--- B3. Валидная сессия, вообще без заголовка, GET-vs-state: state-changing /auth/cookie/logout -> 403 (контроль) ---
+no-header logout -> 403
+--- D2. Валидная сессия: auth-cookie есть, csrf-cookie удалён из jar, state-changing -> ожидаем 403 (double-submit не пройден) ---
+auth-only logout -> 403
+--- B4. Метод /auth/account в openapi ---
+{'/auth/account': ['post']}
+--- C2. Повторный logout валидной сессии с валидным CSRF (после успешного logout) ---
+first logout -> 204
+awk: 1: unexpected character '\'
+awk: line 1: runaway string constant "csrf_token ...
+repeat logout -> 401

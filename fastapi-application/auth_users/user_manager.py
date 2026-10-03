@@ -13,8 +13,6 @@ from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi_users.models import UserProtocol
-
 from config_log import logF
 from core.config import settings
 from db_core.db_async import CurrentSession
@@ -22,6 +20,7 @@ from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, UUIDIDMixin
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.exceptions import InvalidPasswordException, UserAlreadyExists
+from fastapi_users.models import UserProtocol
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -95,9 +94,12 @@ async def get_user_manager(
     user_db: Annotated[SQLAlchemyUserDatabase, Depends(get_user_db)],
 ) -> AsyncGenerator[UserManager, None]:
     """DI: UserManager, получающий user_db из get_user_db."""
-    logF.debug("get_user_manager %s", user_db)
+    # Безопасный лог lifecycle: не пишем repr user_db (в нём данные БД).
+    logF.debug("auth_users: get_user_manager enter")
 
     yield UserManager(user_db)
+
+    logF.debug("auth_users: get_user_manager exit")
 
 
 # AsyncSession импортируется намеренно — он нужен, когда фаза 2 добавит

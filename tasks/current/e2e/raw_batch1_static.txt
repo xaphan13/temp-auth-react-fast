@@ -1,0 +1,36 @@
+=== git status ===
+ M .qwen/agents/backend-dev.md
+ M .qwen/agents/docs-writer.md
+ M .qwen/agents/frontend-dev.md
+ M .qwen/agents/qa.md
+ M .qwen/agents/spec-writer.md
+ M README.md
+ M docs/00_agent_navigation.md
+ M docs/02_architecture.md
+ M docs/03_execution_flow.md
+ M docs/04_authorization.md
+ M docs/05_authorization_upgrade.md
+ M docs/06_auth_visual.md
+ M docs/08_jwt_transport_options.md
+ M docs/10_auth_transport_strategy_tutorial.md
+ M docs/11_frontend_browser_api_csrf.md
+ M fastapi-application/auth_users/csrf.py
+ M fastapi-application/auth_users/router.py
+ M fastapi-application/auth_users/user_manager.py
+ M fastapi-application/main.py
+ M tasks/current/REQUIREMENTS.md
+?? docs/12_auth_dual_transport_walkthrough.md
+?? tasks/current/dev/
+=== dev progress ===
+phase01_progress.md
+phase02_progress.md
+=== ruff ===
+24 | from sqlalchemy.exc import IntegrityError
+   |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
+=== openapi paths ===
+25
+=== ports ===
+LISTEN 0      2048            127.0.0.1:8012       0.0.0.0:*    users:(("uvicorn",pid=2245960,fd=14))        

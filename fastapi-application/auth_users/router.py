@@ -15,6 +15,7 @@ self.get_user_manager и self.authenticator — явно передавать н
 
 from typing import Annotated
 
+from config_log import logF
 from core.config import settings
 from fastapi import APIRouter, Depends
 
@@ -35,6 +36,9 @@ protected_router = APIRouter(prefix=f"{settings.api.prefix}{settings.api.v1.pref
 
 @protected_router.get("/protected", tags=["auth"])
 async def protected(user: Annotated[User, Depends(active_user)]):
+    # Факт входа в protected логируется в самом обработчике: dependency уже
+    # прошла аутентификацию, при успехе известен user.id. Секретов не пишем.
+    logF.info("auth protected: authenticated user_id=%s", user.id)
     return {
         "authenticated": True,
         "user": UserRead.model_validate(user),

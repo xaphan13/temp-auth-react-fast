@@ -122,7 +122,7 @@ Accept: */*
 Пример login:
 
 ```http
-POST /auth/jwt/login HTTP/1.1
+POST /auth/cookie/login HTTP/1.1
 Content-Type: application/x-www-form-urlencoded
 
 username=student%40example.com&password=password123
@@ -133,7 +133,12 @@ username=student%40example.com&password=password123
 ```http
 HTTP/1.1 204 No Content
 Set-Cookie: auth=<JWT>; Max-Age=86400; HttpOnly; SameSite=Lax; Path=/
+Set-Cookie: csrf_token=<nonce>.<signature>; Max-Age=86400; SameSite=Lax; Path=/
 ```
+
+Вместе с `auth` сервер устанавливает cookie `csrf_token` (без `HttpOnly`, чтобы SPA
+мог прочитать её через `document.cookie`). Значение подписано HMAC-SHA256 — это Signed
+Double Submit Cookie (см. `auth_users/csrf.py`).
 
 Затем браузер самостоятельно отправляет cookie:
 
@@ -244,7 +249,7 @@ export function login(body: { email: string; password: string }): Promise<User> 
         password: body.password,
     });
 
-    return postForm<unknown>('/auth/jwt/login', form)
+    return postForm<unknown>('/auth/cookie/login', form)
         .then(() => getJson<User>('/users/me'));
 }
 ```
@@ -252,7 +257,7 @@ export function login(body: { email: string; password: string }): Promise<User> 
 Login здесь состоит из двух запросов:
 
 ```text
-POST /auth/jwt/login
+POST /auth/cookie/login
     ← 204 + Set-Cookie: auth=...
 
 GET /users/me
@@ -305,7 +310,7 @@ Content-Type: application/json
 `LoginPage` вызывает `login()`:
 
 ```text
-1. POST /auth/jwt/login
+1. POST /auth/cookie/login
 2. получить 204 и сохранить cookie силами браузера
 3. GET /users/me
 4. setUser(user) в React Context
@@ -358,7 +363,7 @@ cookie-модель этого требует.
 Кнопка выхода вызывает:
 
 ```http
-POST /auth/jwt/logout
+POST /auth/cookie/logout
 ```
 
 Backend возвращает инструкцию удалить cookie. Затем React делает `setUser(null)`.
@@ -584,7 +589,7 @@ Cookie при следующих запросах
 [1] LoginPage
       │
       ▼
-[2] fetch POST /auth/jwt/login
+[2] fetch POST /auth/cookie/login
       │ username=email, password=...
       ▼
 [3] FastAPI Users проверяет пароль
@@ -779,33 +784,31 @@ CSRF-токеном».
 
 ## 10. Нужен ли CSRF в текущем проекте
 
-Честный ответ: **отдельного CSRF-токена сейчас нет**.
+**Текущий код проекта**: CSRF-защита реализована через Signed Double Submit Cookie
+в `fastapi-application/auth_users/csrf.py` (`CSRFMiddleware`).
 
-В проекте есть:
+Как это работает:
 
-- cookie-аутентификация;
-- `HttpOnly`;
-- `SameSite=Lax`;
-- same-origin production-раздача;
-- backend authentication dependency для защищённых маршрутов.
+- после успешного `POST /auth/cookie/login` (204) middleware устанавливает cookie
+  `csrf_token` со значением формата `<nonce>.<HMAC-SHA256-signature>`;
+- cookie `csrf_token` не имеет флага `HttpOnly` — SPA читает её через
+  `document.cookie`;
+- для state-changing запросов (POST/PUT/PATCH/DELETE), если присутствует auth-cookie,
+  middleware требует заголовок `X-CSRF-Token`, значение которого точно совпадает
+  с cookie `csrf_token`, а подпись валидна;
+- наличие заголовка `Authorization: Bearer` не освобождает от CSRF-проверки, если
+  auth-cookie тоже присутствует (защита от смешанного обхода);
+- после успешного `POST /auth/cookie/logout` cookie `csrf_token` удаляется.
 
-В проекте нет:
+Правильная формулировка для документации и собеседования:
 
-- `X-CSRF-Token` или другого проверяемого CSRF-заголовка;
-- synchronizer token;
-- double-submit cookie;
-- общей backend-проверки `Origin`/`Sec-Fetch-Site` для state-changing endpoints;
-- middleware, который централизованно отвергает запросы без CSRF-доказательства.
+> Текущая same-origin-схема с `SameSite=Lax` снижает CSRF-риск, а явная защита
+> реализована через Signed Double Submit Cookie (`CSRFMiddleware` в
+> `auth_users/csrf.py`). State-changing cookie-запросы требуют `X-CSRF-Token`.
+> Bearer-запросы без auth-cookie CSRF-проверку не проходят.
 
-Поэтому правильная формулировка для документации и собеседования:
-
-> Текущая same-origin-схема с `SameSite=Lax` снижает CSRF-риск, но отдельная
-> CSRF-защита в проекте не реализована. Если cookie используется для чувствительных
-> изменяющих операций, защиту нужно спроектировать явно, особенно при разделении
-> frontend и API на разные origins.
-
-Не следует писать: «CSRF больше нет». Это слишком сильное и технически неточное
-утверждение.
+<!-- Историческая пометка: до реализации CSRFMiddleware документация утверждала,
+что отдельного CSRF-токена нет. Это устаревший прежний контракт. -->
 
 ### 10.1. Когда риск ниже
 
@@ -918,12 +921,21 @@ Sec-Fetch-Site: same-origin | same-site | cross-site
 - allowlist origins нужно поддерживать аккуратно;
 - CSRF-токен лучше выражает намерение приложения.
 
-### 11.5. Как изменить текущий frontend-клиент концептуально
+### 11.5. Как frontend-клиент передаёт CSRF-токен
 
-В текущем `request()` общий клиент автоматически добавляет credentials. Для CSRF его
-можно расширить так, чтобы изменяющие запросы получали токен:
+**Текущий код проекта**: frontend читает cookie `csrf_token` через `document.cookie`
+и добавляет заголовок `X-CSRF-Token` к state-changing запросам. Общий клиент
+(`frontend/src/api/client.ts`) использует `credentials: 'include'`, поэтому
+браузер автоматически прикладывает auth-cookie и csrf_token-cookie.
+
+Концептуальный паттерн (уже реализованный в проекте):
 
 ```ts
+function readCsrfToken(): string | null {
+    const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
     const headers = new Headers(init.headers);
     const method = (init.method ?? 'GET').toUpperCase();
@@ -943,15 +955,15 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
 }
 ```
 
-Но frontend-изменение само по себе не защищает приложение. Backend обязан:
+Backend (`CSRFMiddleware` в `auth_users/csrf.py`) выполняет серверную часть:
 
-1. выдать/связать токен;
-2. проверить header;
-3. отклонить запрос при отсутствии или несовпадении токена;
-4. выполнить authentication и authorization;
-5. только после этого изменить данные.
+1. выдаёт подписанный `csrf_token` при cookie-login;
+2. проверяет совпадение cookie и заголовка `X-CSRF-Token` + валидность HMAC-подписи;
+3. отклоняет запрос (403) при отсутствии или несовпадении токена;
+4. удаляет `csrf_token` при cookie-logout;
+5. выполняет authentication и authorization только после CSRF-проверки.
 
-Нельзя добавлять header в React и считать задачу закрытой без серверной проверки.
+Frontend-изменение без серверной проверки не защищает приложение — оба слоя обязательны.
 
 ### 11.6. Какие операции защищать
 
@@ -1115,7 +1127,7 @@ Database/Redis strategy, introspection или другой server-side меха�
             ← 401 или текущий User
 
 Login:
-  React   → fetch POST /auth/jwt/login
+  React   → fetch POST /auth/cookie/login
             ← 204 + Set-Cookie: auth=<JWT>; HttpOnly; SameSite=Lax
   browser сохраняет cookie
   React   → fetch GET /users/me

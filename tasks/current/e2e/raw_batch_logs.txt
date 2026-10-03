@@ -1,0 +1,33 @@
+LOG_START_LINE=2800
+=== всего новых строк (с учётом многострочных) ===
+48
+=== уникальные маркеры сообщений ===
+     19 DEBUG: auth csrf:
+     20 DEBUG: auth_users:
+      2 INFO: auth csrf:
+      2 INFO: auth protected:
+      1 INFO: auth_users:
+      1 INFO: get_all_orders :
+      3 WARNING: auth csrf:
+=== protected ===
+DEBUG: auth csrf: method=GET path=/api/v1/auth/protected required=False valid=None
+/* 2026-10-03 04:12:08,214 - router.protected(41) - [MainThread] - [135267879798592] */  
+INFO: auth protected: authenticated user_id=e51d2d79-b9f0-4298-9891-9abfd3b2cf09
+DEBUG: auth csrf: method=GET path=/api/v1/auth/protected required=False valid=None
+/* 2026-10-03 04:12:08,443 - router.protected(41) - [MainThread] - [135267879798592] */  
+INFO: auth protected: authenticated user_id=e51d2d79-b9f0-4298-9891-9abfd3b2cf09
+=== csrf issued/removed ===
+INFO: auth csrf: issued csrf_token cookie path=/auth/cookie/login
+INFO: auth csrf: deleted csrf_token cookie path=/auth/cookie/logout
+=== backends при старте ===
+2758:INFO: auth backends order: jwt-cookie -> jwt-bearer
+2776:INFO: auth backends order: jwt-cookie -> jwt-bearer
+2786:INFO: auth backends order: jwt-cookie -> jwt-bearer
+=== СЕКРЕТ-СКАН: полные JWT/cookie/CSRF/пароли в новых строках ===
+0
+0
+0
+0
+=== СЕКРЕТ-СКАН по всему log/ ===
+fastapi-application/log/temp_auth.log:0
+scan-done

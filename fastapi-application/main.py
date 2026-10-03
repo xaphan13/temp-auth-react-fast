@@ -1,6 +1,7 @@
 import uvicorn
 from api import router_api
 from auth_users.csrf import CSRFMiddleware
+from auth_users.fastapi_users_obj import fastapi_users
 from auth_users.router import router as auth_users_router
 from base_dir_path import BASE_DIR
 from config_log import logF
@@ -14,6 +15,13 @@ logF.info("\n\n\n\n'************************************************************
 
 # load_model_registry()
 main_app = create_app(custom_docs_url=False)
+
+# Состав и порядок auth backend'ов (контракт cookie -> bearer, fastapi_users_obj.py).
+# Логируем только имена транспортов, без секретов и значений токенов.
+logF.info(
+    "auth backends order: %s",
+    " -> ".join(backend.name for backend in fastapi_users.authenticator.backends),
+)
 
 # CSRF-защита cookie-транспорта: Signed Double Submit Cookie (auth_users/csrf.py).
 # Starlette middleware глобален для всего приложения; mount_frontend ниже

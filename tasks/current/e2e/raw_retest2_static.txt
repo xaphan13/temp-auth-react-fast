@@ -1,0 +1,33 @@
+=== RETEST 2026-10-03 (qa, специализированная модель, порт 8031) ===
+
+--- 1. uv run ruff check auth_users/ main.py ---
+All checks passed!
+RUFF_EXIT=0
+
+--- 2. OpenAPI paths ---
+25
+
+--- 3. README счётчик path-ключей ---
+134:cd fastapi-application && ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"   # 25 path-ключей OpenAPI
+
+--- 4. docs/12 URL fastapi-users ---
+460:9. [fastapi-users Configuration / Authentication backends](https://fastapi-users.github.io/fastapi-users/latest/configuration/authentication/) —
+(exit 0)
+
+--- 5. Целевой grep старых auth-фактов по docs ---
+../docs/02_architecture.md:55:Стандартные маршруты управления пользователями по идентификатору не подключаются. Прежний контракт `/auth/jwt/*` устарел и заменён разделёнными префиксами `/auth/cookie/*` и `/auth/bearer/*`.
+../docs/05_authorization_upgrade.md:22:Прежний единый контракт `/auth/jwt/*` устарел и заменён двумя раздельными префиксами.
+../docs/06_auth_visual.md:219:Примечание: прежний единый путь `/auth/jwt/login` (устаревший контракт до внедрения
+../docs/07_auth_token_flow_code.md:76:`/auth/cookie/*` и `/auth/bearer/*`. Ранее использовавшийся префикс `/auth/jwt/*` — прошлый
+../docs/08_jwt_transport_options.md:353:Прежний единый путь `/auth/jwt/login` больше не существует (исторический контракт до
+GREP_OLD_EXIT=0 (1 = совпадений нет)
+
+--- 6. docs/12: навигатор, пути, ссылки, дата ---
+1
+4
+5
+29
+3
+
+--- 7. Версия fastapi-users ---
+15.0.5

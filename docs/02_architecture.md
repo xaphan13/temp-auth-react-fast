@@ -33,7 +33,7 @@ FastAPI main_app
 | `db_core` | engine, async-сессии, `Base`, типы SQLAlchemy |
 | `api` | учебные примеры FastAPI |
 | `ex_order_product` | учебный SQLAlchemy-домен заказов |
-| `auth_users` | User, пароль, cookie-JWT, зависимости доступа, аккаунт и avatar flow |
+| `auth_users` | User, пароль, два транспорта JWT (cookie + bearer), CSRF-защита, зависимости доступа, аккаунт и avatar flow |
 | `setup_frontend.py` | mounts для avatar static, frontend assets и generic SPA fallback |
 | `frontend` | auth UI, React Router, fetch-клиенты и локальное состояние |
 | `main.py` | единственная точка композиции приложения |
@@ -42,33 +42,35 @@ FastAPI main_app
 
 ## Авторизация и защищённый endpoint
 
-Пакет `auth_users` выдаёт JWT в HttpOnly-cookie. Dependency `active_user` используется auth router и endpoint `GET /api/v1/auth/protected`; этот endpoint является независимой backend-границей и не полагается на client-side guard. Anonymous получает JSON 401, авторизованный пользователь — JSON с подтверждением доступа и данными пользователя.
+Пакет `auth_users` поддерживает два транспорта авторизации на общей `JWTStrategy`: `CookieTransport` для браузерного потока (HttpOnly-cookie `auth` + Signed Double Submit Cookie CSRF через `CSRFMiddleware` в `auth_users/csrf.py`) и `BearerTransport` для не-браузерных клиентов (JSON `access_token`). Dependency `active_user` перебирает backend'ы в порядке cookie → bearer и используется auth router и endpoint `GET /api/v1/auth/protected`; этот endpoint является независимой backend-границей и не полагается на client-side guard. Anonymous получает JSON 401, авторизованный пользователь — JSON с подтверждением доступа и данными пользователя.
 
 Auth router сохраняет следующие операции:
 
-- `/auth/jwt/login` и `/auth/jwt/logout`;
+- `/auth/cookie/login` и `/auth/cookie/logout` (CookieTransport; state-changing запросы с auth-cookie требуют заголовок `X-CSRF-Token`);
+- `/auth/bearer/login` и `/auth/bearer/logout` (BearerTransport);
 - `/auth/register`;
 - `/auth/account`;
 - `GET/PATCH /users/me`.
 
-Стандартные маршруты управления пользователями по идентификатору не подключаются.
+Стандартные маршруты управления пользователями по идентификатору не подключаются. Прежний контракт `/auth/jwt/*` устарел и заменён разделёнными префиксами `/auth/cookie/*` и `/auth/bearer/*`.
 
 ## Хранилища данных
 
 - **SQLAlchemy/БД:** пользователь `user`, демо-таблицы заказов и товаров.
 - **Файлы:** `static/profile_pics/` — аватары пользователей.
-- **Браузер:** HttpOnly cookie `auth` для JWT и состояние auth-контекста.
+- **Браузер:** HttpOnly cookie `auth` для JWT (CookieTransport) и cookie `csrf_token` для Signed Double Submit CSRF; BearerTransport хранит токен только на клиенте.
 
 Путь аватара в БД хранится как имя файла; URL `/static/profile_pics/<имя>` формируется клиентом.
 
 ## Поток запроса
 
 1. Uvicorn передаёт запрос FastAPI.
-2. Роутинг выбирает вложенный API-роутер; catch-all находится последним.
-3. FastAPI разрешает dependency и открывает `CurrentSession`, если она нужна.
-4. Для защищённого маршрута `active_user` читает JWT из cookie и загружает `User` через `SQLAlchemyUserDatabase`.
-5. Обработчик читает или изменяет БД.
-6. Ответ сериализуется FastAPI; JSON API возвращает данные для auth-клиента.
+2. `CSRFMiddleware` проверяет state-changing cookie-запросы: при наличии auth-cookie требуется заголовок `X-CSRF-Token`, совпадающий с подписью cookie `csrf_token`.
+3. Роутинг выбирает вложенный API-роутер; catch-all находится последним.
+4. FastAPI разрешает dependency и открывает `CurrentSession`, если она нужна.
+5. Для защищённого маршрута `active_user` перебирает backend'ы (cookie → bearer), читает JWT и загружает `User` через `SQLAlchemyUserDatabase`.
+6. Обработчик читает или изменяет БД.
+7. Ответ сериализуется FastAPI; JSON API возвращает данные для auth-клиента.
 
 JWT самодостаточен для аутентификации, но dependency обращается к БД за актуальным пользователем и проверяет `is_active`.
 
@@ -83,3 +85,6 @@ JWT самодостаточен для аутентификации, но depen
 3. Путь аватара в БД хранится как имя файла; URL `/static/profile_pics/<имя>` собирает фронтенд.
 4. Секрет `settings.web.secret_key` используется JWT-стратегией и токенами fastapi-users.
 5. `/api/v1/auth/protected` остаётся защищённым `active_user` независимо от состояния UI.
+6. OpenAPI содержит 25 path-ключей (считайте через `main_app.openapi()['paths']`, а не через `len(main_app.routes)`).
+
+</content>

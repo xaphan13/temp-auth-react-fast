@@ -22,18 +22,19 @@
 graph TD
     subgraph ENTRY["Точка сборки — main.py"]
         MAIN["main.py<br/>main_app = create_app()"]
-        INCLUDE["main_app.include_router(auth_users_router)<br/>main.py:19"]
+        INCLUDE["main_app.include_router(auth_users_router)<br/>main.py"]
     end
 
     subgraph PKG["Пакет fastapi-application/auth_users/"]
         ROUTER["router.py<br/>router = APIRouter()"]
-        AUTHB["auth_backend.py"]
+        AUTHB["auth_backend.py<br/>(cookie_backend + bearer_backend)"]
         FUOBJ["fastapi_users_obj.py"]
         UMAN["user_manager.py"]
         ACC["account.py"]
         HELP["helpers.py"]
         SCH["schemas.py"]
         MOD["models.py"]
+        CSRF["csrf.py<br/>CSRFMiddleware"]
     end
 
     subgraph DB["db_core/"]
@@ -47,11 +48,11 @@ graph TD
     MAIN --> INCLUDE
     INCLUDE --> ROUTER
     ROUTER -->|"from auth_users.account import router"| ACC
-    ROUTER -->|"from auth_users.auth_backend import auth_backend"| AUTHB
+    ROUTER -->|"from auth_users.auth_backend import cookie_backend, bearer_backend"| AUTHB
     ROUTER -->|"from auth_users.fastapi_users_obj import active_user, fastapi_users"| FUOBJ
     ROUTER -->|"from auth_users.schemas import UserCreate, UserRead, UserUpdate"| SCH
     ROUTER -->|"from auth_users.models import User"| MOD
-    FUOBJ -->|"from auth_users.auth_backend import auth_backend"| AUTHB
+    FUOBJ -->|"from auth_users.auth_backend import cookie_backend, bearer_backend"| AUTHB
     FUOBJ -->|"from auth_users.user_manager import get_user_manager"| UMAN
     UMAN -->|"from auth_users.models import User"| MOD
     UMAN -->|"from db_core.db_async import CurrentSession"| DBSESS
@@ -62,6 +63,8 @@ graph TD
     AUTHB --> CONF
     UMAN --> CONF
     ROUTER --> CONF
+    MAIN -->|"add_middleware(CSRFMiddleware)"| CSRF
+    CSRF --> CONF
 ```
 
 Все импорты — **плоские** (`core.config`, `db_core.db_async`, а не путь от корня
@@ -73,20 +76,24 @@ graph TD
 ## 2. Экземпляры: кто что собирает
 
 Этот граф — про объекты, а не про файлы. `fastapi_users_obj.py` — единственное место,
-где собирается связка «менеджер + бэкенд», и именно от него наследуются все
-`Depends`-обёртки.
+где собирается связка «менеджер + бэкенды», и именно от него наследуются все
+`Depends`-обёртки. В текущем контракте используются **два backend'а** (`cookie_backend`
+и `bearer_backend`) на общей `get_jwt_strategy`.
 
 ```mermaid
 graph TD
     SET["settings.web.secret_key<br/>settings.auth_users.*"]
-    CT["cookie_transport<br/>CookieTransport(auth_backend.py:19)"]
-    GJS["get_jwt_strategy()<br/>auth_backend.py:28"]
-    AB["auth_backend<br/>AuthenticationBackend(name='jwt')<br/>auth_backend.py:36"]
-    GUM["get_user_manager()<br/>user_manager.py:93"]
-    GUD["get_user_db()<br/>user_manager.py:86"]
+    CT["cookie_transport<br/>CookieTransport(auth_backend.py)"]
+    BT["bearer_transport<br/>BearerTransport(auth_backend.py)"]
+    GJS["get_jwt_strategy()<br/>auth_backend.py"]
+    CB["cookie_backend<br/>AuthenticationBackend(name='jwt-cookie')<br/>auth_backend.py"]
+    BB["bearer_backend<br/>AuthenticationBackend(name='jwt-bearer')<br/>auth_backend.py"]
+    GUM["get_user_manager()<br/>user_manager.py"]
+    GUD["get_user_db()<br/>user_manager.py"]
     UDB["SQLAlchemyUserDatabase(session, User)"]
-    UM["UserManager(user_db)<br/>user_manager.py:31"]
-    FU["fastapi_users<br/>FastAPIUsers[User, UUID]<br/>fastapi_users_obj.py:17"]
+    UM["UserManager(user_db)<br/>user_manager.py"]
+    FU["fastapi_users<br/>FastAPIUsers[User, UUID]<br/>fastapi_users_obj.py"]
+    CSRFM["CSRFMiddleware<br/>csrf.py"]
 
     CU["current_user"]
     AU["active_user = current_user(active=True)"]
@@ -94,13 +101,18 @@ graph TD
     SU["superuser_user<br/>(объявлен, в проекте не используется)"]
 
     SET --> CT
+    SET --> BT
     SET --> GJS
-    CT --> AB
-    GJS --> AB
+    SET --> CSRFM
+    CT --> CB
+    BT --> BB
+    GJS --> CB
+    GJS --> BB
     GUD --> UDB
     UDB --> GUM
     GUM --> UM
-    AB --> FU
+    CB --> FU
+    BB --> FU
     UM --> FU
     FU --> CU
     CU --> AU
@@ -122,10 +134,12 @@ graph TD
 
 ```mermaid
 graph LR
-    subgraph HTTP["HTTP (методы и пути)"]
+subgraph HTTP["HTTP (методы и пути)"]
         R1["POST /auth/register"]
-        R2["POST /auth/jwt/login"]
-        R3["POST /auth/jwt/logout"]
+        R2["POST /auth/cookie/login"]
+        R2B["POST /auth/bearer/login"]
+        R3["POST /auth/cookie/logout"]
+        R3B["POST /auth/bearer/logout"]
         R4["GET+PATCH /users/me"]
         R5["POST /auth/account"]
         R6["GET /api/v1/auth/protected"]
@@ -141,8 +155,10 @@ graph LR
 
     R1 --> GUM
     R2 --> GUM
-    R2 --> AB(["auth_backend<br/>(CookieTransport + JWTStrategy)"])
-    R3 --> AB
+    R2 --> CB(["cookie_backend<br/>(CookieTransport + JWTStrategy)"])
+    R2B --> BB(["bearer_backend<br/>(BearerTransport + JWTStrategy)"])
+    R3 --> CB
+    R3B --> BB
     R4 --> CU
     R5 --> AU
     R6 --> AU
@@ -156,56 +172,52 @@ graph LR
     AU -.->|"загружает User"| SES
 ```
 
-Три маршрута — `/auth/jwt/login`, `/auth/jwt/logout`, `/auth/register` — **не имеют
-своих обработчиков в этом репозитории**. Их создаёт `fastapi-users` в момент импорта:
+Маршруты login/logout **не имеют своих обработчиков в этом репозитории** — их создаёт
+`fastapi-users` в момент импорта. В текущем контракте подключены **два backend'а**
+(`cookie_backend` и `bearer_backend`) на общей `JWTStrategy`:
 
 ```python
 # auth_users/router.py
-auth_router = fastapi_users.get_auth_router(auth_backend)          # :26
-register_router = fastapi_users.get_register_router(UserRead, UserCreate)   # :27
-users_router = fastapi_users.get_users_router(UserRead, UserUpdate)         # :28
-users_router.routes = [rt for rt in users_router.routes if rt.path == "/me"]  # :29
+cookie_auth_router = fastapi_users.get_auth_router(cookie_backend)
+bearer_auth_router = fastapi_users.get_auth_router(bearer_backend)
+register_router = fastapi_users.get_register_router(UserRead, UserCreate)
+users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
+users_router.routes = [route for route in users_router.routes if route.path == "/me"]
 ```
 
-Строка `:29` — важная: `get_users_router` порождает пять путей (`/me` GET/PATCH,
+Последняя строка важна: `get_users_router` порождает пять путей (`/me` GET/PATCH,
 `/{id}` GET/PATCH/DELETE), и проект **обрезает список до `/me`**. Поэтому маршрутов
 управления пользователями по ID в приложении нет, хотя библиотека их предлагает.
 
-Инвентаризация живого приложения (рекурсивный обход `main_app.routes`) — 44 объекта,
-из них 37 `APIRoute`:
+Подключение роутеров задаёт префиксы:
+
+```python
+router.include_router(cookie_auth_router, prefix="/auth/cookie", tags=["auth-cookie"])
+router.include_router(bearer_auth_router, prefix="/auth/bearer", tags=["auth-bearer"])
+router.include_router(register_router, prefix="/auth", tags=["auth-register"])
+```
+
+OpenAPI-инвентарь живого приложения — **25 path-ключей** (проверка:
+`len(main_app.openapi()['paths'])` → `25`). Top-level `main_app.routes` содержит 9
+объектов (4 служебных `Route` + SPA catch-all + `Mount /assets` + три `_IncludedRouter`);
+наивный `len(main_app.routes)` не показателен — считайте OpenAPI-пути.
+
+Auth-маршруты в OpenAPI:
 
 ```
-/openapi.json                                     ['GET','HEAD']  <- openapi
-/docs                                             ['GET','HEAD']  <- swagger_ui_html
-/docs/oauth2-redirect                             ['GET','HEAD']  <- swagger_ui_redirect
-/redoc                                            ['GET','HEAD']  <- redoc_html
-/api/v1/dep_examples/single-direct-dependency     ['GET']
-/api/v1/dep_examples/single-via-func              ['GET']
-/api/v1/dep_examples/multi-direct-and-via-func    ['GET']
-/api/v1/dep_examples/multi-indirect               ['GET']
-/api/v1/dep_examples/helper-as-dependency         ['GET']
-/api/v1/dep_examples/great-service-as-dependency  ['GET']
-/api/v1/dep_examples/direct-cls-dependency        ['GET']
-/api/v1/fastapi_class_old/my_items/{item_id}      ['GET']
-/api/v1/fastapi_class_annotated/my_items/{item_id} ['GET']
-/api/v1/depends_class_annotated/my_items/{item_id} ['GET']
-/api/v1/depends_function_annotated/my_items/{item_id} ['GET']
-/orders/add_order                                 ['POST']
-/orders/insert_order                              ['POST']
-/orders/get_order_filter_by                       ['GET']
-/orders/get_order_where                           ['GET']
-/orders/get_all_orders                            ['GET']
-/orders/get_all_join                              ['GET']
-/auth/jwt/login                                   ['POST']  <- auth:jwt.login
-/auth/jwt/logout                                  ['POST']  <- auth:jwt.logout
+/auth/cookie/login                                ['POST']  <- auth:jwt-cookie.login
+/auth/cookie/logout                               ['POST']  <- auth:jwt-cookie.logout
+/auth/bearer/login                                ['POST']  <- auth:jwt-bearer.login
+/auth/bearer/logout                               ['POST']  <- auth:jwt-bearer.logout
 /auth/register                                    ['POST']  <- register:register
 /users/me                                         ['GET']   <- users:current_user
 /users/me                                         ['PATCH'] <- users:patch_current_user
 /auth/account                                     ['POST']  <- auth.account_post
 /api/v1/auth/protected                            ['GET']   <- protected
-/assets                                           []        <- Mount spa_assets
-/{full_path:path}                                 ['GET','HEAD'] <- spa_fallback
 ```
+
+Примечание: прежний единый путь `/auth/jwt/login` (устаревший контракт до внедрения
+двух транспортов) заменён на `/auth/cookie/login` и `/auth/bearer/login`.
 
 Примечание: в FastAPI 0.141 `include_router` кладёт в `app.routes` объект
 `_IncludedRouter` (с полем `include_context`), а не плоский список `APIRoute`. Наивный
@@ -228,12 +240,14 @@ sequenceDiagram
     participant PL as pwdlib (Argon2)
     participant JWT as JWTStrategy (PyJWT)
     participant CT as CookieTransport
+    participant CSRFM as CSRFMiddleware
     participant LS as login-steps
 
     B->>L: submit(email, password)
     L->>A: login({email, password})
-    A->>C: postForm('/auth/jwt/login', username=email)
-    C->>R: POST (x-www-form-urlencoded, credentials:include)
+    A->>C: postForm('/auth/cookie/login', username=email)
+    C->>CSRFM: POST (x-www-form-urlencoded, credentials:'include')
+    CSRFM->>R: пропускает (auth-cookie ещё нет, CSRF-проверка не требуется)
     R->>UM: authenticate(credentials, user_manager)
     UM->>PL: verify_and_update(password, hashed_password)
     PL-->>UM: ok
@@ -241,7 +255,9 @@ sequenceDiagram
     R->>JWT: write_token(user)
     JWT-->>R: подписанный JWT (HS256)
     R->>CT: Set-Cookie auth=JWT; HttpOnly; Max-Age=86400
-    R-->>C: 204 No Content
+    R-->>CSRFM: 204 No Content
+    CSRFM->>CSRFM: устанавливает csrf_token cookie (Signed Double Submit)
+    CSRFM-->>C: 204 + Set-Cookie auth + Set-Cookie csrf_token
     C-->>A: ok
     A->>A: затем GET /users/me (второй запрос)
 ```
@@ -250,8 +266,8 @@ sequenceDiagram
 несёт тела, поэтому `api/auth.ts::login()`:
 
 ```ts
-// frontend/src/api/auth.ts:17
-return postForm<unknown>('/auth/jwt/login', form).then(() => getJson<User>('/users/me'));
+// frontend/src/api/auth.ts
+return postForm<unknown>('/auth/cookie/login', form).then(() => getJson<User>('/users/me'));
 ```
 
 Это подтверждено профилем: `read_token` вызывался 20 раз за прогон при 5 логинах —
@@ -267,18 +283,18 @@ return postForm<unknown>('/auth/jwt/login', form).then(() => getJson<User>('/use
 
 ### 5.1. Кто вызывает код проекта
 
-| вызывающий (библиотека) | → | функция проекта | файл:строка |
+| вызывающий (библиотека) | → | функция проекта | файл |
 |---|---|---|---|
-| `fastapi_users/router/register.py:16` | → | `UserManager.create` | `auth_users/user_manager.py:50` |
-| `fastapi_users/manager.py:110` | → | `UserManager.validate_password` | `auth_users/user_manager.py:42` |
-| `fastapi_users/manager.py:110` | → | `UserManager.on_after_register` | `auth_users/user_manager.py:71` |
-| `fastapi/routing.py:344` (`run_endpoint_function`) | → | `account_post` | `auth_users/account.py:30` |
-| `fastapi/routing.py:344` (`run_endpoint_function`) | → | `protected` | `auth_users/router.py:34` |
-| `contextlib.__aenter__/__aexit__` | → | `get_user_manager` | `auth_users/user_manager.py:93` |
-| `contextlib.__aenter__/__aexit__` | → | `get_user_db` | `auth_users/user_manager.py:86` |
-| `contextlib.__aenter__/__aexit__` | → | `get_async_session` | `db_core/db_async.py:58` |
-| `fastapi/routing.py:1778` (`handle`) | → | `validation_response` | `auth_users/helpers.py:46` |
-| `_contextvars.Context.run` | → | `get_jwt_strategy` | `auth_users/auth_backend.py:28` |
+| `fastapi_users/router/register.py` | → | `UserManager.create` | `auth_users/user_manager.py` |
+| `fastapi_users/manager.py` | → | `UserManager.validate_password` | `auth_users/user_manager.py` |
+| `fastapi_users/manager.py` | → | `UserManager.on_after_register` | `auth_users/user_manager.py` |
+| `fastapi/routing.py` (`run_endpoint_function`) | → | `account_post` | `auth_users/account.py` |
+| `fastapi/routing.py` (`run_endpoint_function`) | → | `protected` | `auth_users/router.py` |
+| `contextlib.__aenter__/__aexit__` | → | `get_user_manager` | `auth_users/user_manager.py` |
+| `contextlib.__aenter__/__aexit__` | → | `get_user_db` | `auth_users/user_manager.py` |
+| `contextlib.__aenter__/__aexit__` | → | `get_async_session` | `db_core/db_async.py` |
+| `fastapi/routing.py` (`handle`) | → | `validation_response` | `auth_users/helpers.py` |
+| `_contextvars.Context.run` | → | `get_jwt_strategy` | `auth_users/auth_backend.py` |
 
 Обратите внимание на строку `contextlib.__aenter__` → `get_user_manager`: **dependency
 в этом проекте — асинхронный генератор**, его вход в тело и выход из него идут через
@@ -289,19 +305,19 @@ return postForm<unknown>('/auth/jwt/login', form).then(() => getJson<User>('/use
 
 | функция проекта | ncalls | cum, с | уходит в |
 |---|---:|---:|---|
-| `UserManager.create` (`user_manager.py:50`) | 23 | 0.0197 | `fastapi_users/manager.py:create` (0.0161) |
-| `on_after_register` (`user_manager.py:71`) | 10 | 0.0067 | `SQLAlchemyUserDatabase.update`, `str.split` |
-| `get_user_manager` (`user_manager.py:93`) | 14 | 0.0047 | `logging.debug` (130 вызовов, 0.0041 с) |
-| `get_async_session` (`db_core/db_async.py:58`) | 21 | 0.0017 | `AsyncSession.__aenter__/__aexit__` |
-| `account_post` (`account.py:30`) | 5 | 0.0011 | `is_valid_email`, `username_exists` |
-| `username_exists` (`helpers.py:27`) | 5 | 0.0006 | `AsyncSession.execute` → SELECT по `username` |
-| `protected` (`router.py:34`) | 1 | 0.0006 | `UserRead.model_validate` (pydantic) |
-| `is_valid_email` (`helpers.py:19`) | 1 | 0.0005 | `EmailStr._validate` (pydantic/networks) |
-| `get_jwt_strategy` (`auth_backend.py:28`) | 6 | 0.0001 | `JWTStrategy.__init__` |
-| `validation_response` (`helpers.py:46`) | 1 | 0.0001 | `JSONResponse.__init__` |
-| `get_user_db` (`user_manager.py:86`) | 14 | ~0 | `SQLAlchemyUserDatabase.__init__` |
-| `validate_password` (`user_manager.py:42`) | 1 | ~0 | `len` |
-| `models.py:38 <lambda>` | 1 | ~0 | `datetime.now` (дефолт `created_at`) |
+| `UserManager.create` (`user_manager.py`) | 23 | 0.0197 | `fastapi_users/manager.py:create` (0.0161) |
+| `on_after_register` (`user_manager.py`) | 10 | 0.0067 | `SQLAlchemyUserDatabase.update`, `str.split` |
+| `get_user_manager` (`user_manager.py`) | 14 | 0.0047 | `logging.debug` (130 вызовов, 0.0041 с) |
+| `get_async_session` (`db_core/db_async.py`) | 21 | 0.0017 | `AsyncSession.__aenter__/__aexit__` |
+| `account_post` (`account.py`) | 5 | 0.0011 | `is_valid_email`, `username_exists` |
+| `username_exists` (`helpers.py`) | 5 | 0.0006 | `AsyncSession.execute` → SELECT по `username` |
+| `protected` (`router.py`) | 1 | 0.0006 | `UserRead.model_validate` (pydantic) |
+| `is_valid_email` (`helpers.py`) | 1 | 0.0005 | `EmailStr._validate` (pydantic/networks) |
+| `get_jwt_strategy` (`auth_backend.py`) | 6 | 0.0001 | `JWTStrategy.__init__` |
+| `validation_response` (`helpers.py`) | 1 | 0.0001 | `JSONResponse.__init__` |
+| `get_user_db` (`user_manager.py`) | 14 | ~0 | `SQLAlchemyUserDatabase.__init__` |
+| `validate_password` (`user_manager.py`) | 1 | ~0 | `len` |
+| `models.py <lambda>` | 1 | ~0 | `datetime.now` (дефолт `created_at`) |
 
 ### 5.3. Ответ на исходный вопрос: цепочка `Depends(active_user)`
 
@@ -311,16 +327,16 @@ return postForm<unknown>('/auth/jwt/login', form).then(() => getJson<User>('/use
 ```mermaid
 graph TD
     P["GET /api/v1/auth/protected<br/>router.py:protected"]
-    CUD["current_user_dependency<br/>fastapi_users/authenticator.py:139"]
-    CUTD["current_user_token_dependency<br/>authenticator.py:94"]
-    AUTH["_authenticate<br/>authenticator.py:153"]
-    RT["read_token (JWTStrategy)<br/>strategy/jwt.py:43"]
+    CUD["current_user_dependency<br/>fastapi_users/authenticator.py"]
+    CUTD["current_user_token_dependency<br/>authenticator.py"]
+    AUTH["_authenticate<br/>authenticator.py"]
+    RT["read_token (JWTStrategy)<br/>strategy/jwt.py"]
     DEC["jwt.decode → decode_complete → _verify_signature"]
-    GUM["get_user_manager<br/>auth_users/user_manager.py:93"]
-    GUD["get_user_db<br/>user_manager.py:86"]
-    SES["get_async_session<br/>db_core/db_async.py:58"]
+    GUM["get_user_manager<br/>auth_users/user_manager.py"]
+    GUD["get_user_db<br/>user_manager.py"]
+    SES["get_async_session<br/>db_core/db_async.py"]
     UDB["SQLAlchemyUserDatabase"]
-    GET["_get_user<br/>fastapi_users_db_sqlalchemy/__init__.py:188"]
+    GET["_get_user<br/>fastapi_users_db_sqlalchemy/__init__.py"]
     SQL["SELECT user.* FROM user WHERE user.id = ?"]
 
     P -->|"Depends(active_user)"| CUD
@@ -344,20 +360,20 @@ graph TD
 ### 5.4. Цепочка login по профилю (факт, не замысел)
 
 ```
-login (fastapi_users/router/auth.py:44, cum 0.3367 с, 5 вызовов)
- └─ authenticate (fastapi_users/manager.py:636, cum 0.3347)
-     └─ verify_and_update (fastapi_users/password.py:31, cum 0.3310)
-         └─ pwdlib/_hash.py:87  →  pwdlib/hashers/argon2.py:‎verify (0.3274)
-                                    →  argon2/_password_hasher.py:215
+login (fastapi_users/router/auth.py, cum 0.3367 с, 5 вызовов)
+ └─ authenticate (fastapi_users/manager.py, cum 0.3347)
+     └─ verify_and_update (fastapi_users/password.py, cum 0.3310)
+         └─ pwdlib/_hash.py  →  pwdlib/hashers/argon2.py:verify (0.3274)
+                                    →  argon2/_password_hasher.py
 ```
 
 **98.5% времени логина — это Argon2.** `0.3274` из `0.3367` секунды. Всё остальное
 (`read_token`, `decode` JWT, SQL) — доли миллисекунд:
 
 ```
-read_token (strategy/jwt.py:43)     0.0073  (20 вызовов)
-jwt decode → _verify_signature      0.0018  ( 4 вызова)
-write_token (strategy/jwt.py:65)    0.0004  ( 1 вызов)
+read_token (strategy/jwt.py)     0.0073  (20 вызовов)
+jwt decode → _verify_signature  0.0018  ( 4 вызова)
+write_token (strategy/jwt.py)   0.0004  ( 1 вызов)
 ```
 
 Практический вывод: если логин «медленный» — это не JWT и не БД, это стоимость хеша
@@ -514,14 +530,15 @@ uvicorn** (а не `TestClient`) понадобится `py-spy record --pid <PI
 
 | Симптом | Куда смотреть | Почему |
 |---|---|---|
-| Логин не ставит cookie | `auth_backend.py:19` `cookie_transport`, `core/config.py::AuthUsersConfig` | имя/атрибуты cookie (`auth`, HttpOnly, SameSite) |
-| `401` на защищённом запросе | `fastapi_users/authentication/authenticator.py:153` (`_authenticate`) → `strategy/jwt.py:43` (`read_token`) | цепочка проверки cookie/JWT |
-| Появилось «лишнее» `Depends` | `fastapi_users_obj.py:17–22` | все обёртки (`current_user`, `active_user`, …) — из одного `fastapi_users` |
-| Маршрут `/users/{id}` пропал | `router.py:29` | список обрезается до `/me` |
-| Регистрация падает `500` на дубликате | `user_manager.py:50` (`UserManager.create`) | перехват `IntegrityError → UserAlreadyExists` |
-| Регистрация не заполняет `username` | `user_manager.py:71` (`on_after_register`) | вывод username из email |
+| Логин не ставит cookie | `auth_backend.py` `cookie_transport`, `core/config.py::AuthUsersConfig` | имя/атрибуты cookie (`auth`, HttpOnly, SameSite) |
+| `401` на защищённом запросе | `fastapi_users/authentication/authenticator.py` (`_authenticate`) → `strategy/jwt.py` (`read_token`) | цепочка проверки cookie/JWT |
+| `403` на state-changing cookie-запросе | `auth_users/csrf.py` (`CSRFMiddleware`) | отсутствует или невалиден `X-CSRF-Token` при наличии auth-cookie |
+| Появилось «лишнее» `Depends` | `fastapi_users_obj.py` | все обёртки (`current_user`, `active_user`, …) — из одного `fastapi_users` |
+| Маршрут `/users/{id}` пропал | `router.py` | список обрезается до `/me` |
+| Регистрация падает `500` на дубликате | `user_manager.py` (`UserManager.create`) | перехват `IntegrityError → UserAlreadyExists` |
+| Регистрация не заполняет `username` | `user_manager.py` (`on_after_register`) | вывод username из email |
 | Логин медленный | `pwdlib/hashers/argon2.py` | 98% времени login — Argon2 |
-| `422` на `/auth/account` | `helpers.py:19,27,33,46` + `account.py:30` | валидация email/уникальности |
+| `422` на `/auth/account` | `helpers.py` + `account.py` | валидация email/уникальности |
 
 ---
 
@@ -556,13 +573,13 @@ py-spy record --rate 250 --format flamegraph --output docs/06_auth_flamegraph.sv
 
 | Доля | Фрейм | Что это |
 |---|---|---|
-| 49.5% | `aiosqlite/core.py:59 _connection_worker_thread` | поток БД — `cProfile` его не показывает вовсе |
-| 46.7% | `uvicorn/main.py:490 main` | главный поток целиком |
-| 28.5% | `httptools_impl.py:422 run_asgi` → ASGI-стек Starlette/FastAPI | обработка HTTP-запроса |
+| 49.5% | `aiosqlite/core.py _connection_worker_thread` | поток БД — `cProfile` его не показывает вовсе |
+| 46.7% | `uvicorn/main.py main` | главный поток целиком |
+| 28.5% | `httptools_impl.py run_asgi` → ASGI-стек Starlette/FastAPI | обработка HTTP-запроса |
 | 27.9% | `fastapi/routing.py` (`handle`/`_handle_selected`) | роутинг + разрешение DI |
 | **11.9%** | `register → UserManager.create → pwdlib.hash → argon2.hash_secret` | **хеш пароля при регистрации** |
 | **11.5%** | `login → authenticate → verify_and_update → pwdlib.verify → argon2.verify_secret` | **проверка пароля при логине** |
-| 7.4% | `<module> auth_users/auth_backend.py:13` | импорт при старте, разово — не на запрос |
+| 7.4% | `<module> auth_users/auth_backend.py` | импорт при старте, разово — не на запрос |
 
 Главный вывод совпал с `cProfile`, но уже на реальном сервере: **внутри главного потока
 Argon2 — примерно половина времени**. Всё остальное (JWT, SQL, ASGI) — доли процента.
@@ -580,9 +597,11 @@ Argon2 — примерно половина времени**. Всё остал
 ### Ограничения
 
 - 4 сэмпла не разрешились (`Errors: 4`) — на доли процента не влияет.
-- Один из «широких» кадров — импорт при старте (`auth_backend.py:13`, 7.4%);
+- Один из «широких» кадров — импорт при старте (`auth_backend.py`, 7.4%);
   при более длительной нагрузке он размывается и к запросам отношения не имеет.
 - `py-spy top --pid` в этой среде требует ptrace и падает с `Permission Denied`;
   работает только схема «py-spy сам запускает процесс».
 - Воспроизведение: `py-spy` — внешний инструмент (`uv tool install py-spy`),
   в `.venv` и в `pyproject.toml` его нет.
+
+</content>

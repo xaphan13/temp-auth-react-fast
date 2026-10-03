@@ -439,6 +439,7 @@ username=newname&email=new@example.com
 - `fastapi-application/auth_users/models.py` — SQLAlchemy-модель `User`;
 - `fastapi-application/auth_users/schemas.py` — `UserRead`, `UserCreate`, `UserUpdate`;
 - `fastapi-application/auth_users/account.py` — изменение username/email;
+- `fastapi-application/auth_users/csrf.py` — `CSRFMiddleware`, Signed Double Submit Cookie, lifecycle `csrf_token`;
 - `fastapi-application/core/config.py` — параметры cookie и JWT.
 
 ### Frontend

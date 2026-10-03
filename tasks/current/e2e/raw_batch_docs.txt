@@ -1,0 +1,60 @@
+=== 1. Критерий 10: устаревшие утверждения (docs 02,03,04,05,06,07,08,10,11) ===
+docs/02_architecture.md:55:Стандартные маршруты управления пользователями по идентификатору не подключаются. Прежний контракт `/auth/jwt/*` устарел и заменён разделёнными префиксами `/auth/cookie/*` и `/auth/bearer/*`.
+docs/05_authorization_upgrade.md:22:Прежний единый контракт `/auth/jwt/*` устарел и заменён двумя раздельными префиксами.
+docs/06_auth_visual.md:219:Примечание: прежний единый путь `/auth/jwt/login` (устаревший контракт до внедрения
+docs/08_jwt_transport_options.md:353:Прежний единый путь `/auth/jwt/login` больше не существует (исторический контракт до
+docs/07_auth_token_flow_code.md:76:`/auth/cookie/*` и `/auth/bearer/*`. Ранее использовавшийся префикс `/auth/jwt/*` — прошлый
+rc=0
+
+=== 1a. исторические пометки рядом с auth/jwt (контекст) ===
+docs/06_auth_visual.md-218-
+docs/06_auth_visual.md:219:Примечание: прежний единый путь `/auth/jwt/login` (устаревший контракт до внедрения
+docs/06_auth_visual.md-220-двух транспортов) заменён на `/auth/cookie/login` и `/auth/bearer/login`.
+--
+docs/08_jwt_transport_options.md-352-`superuser_user` из `auth_users/fastapi_users_obj.py` обслуживают любой из двух credential'ов.
+docs/08_jwt_transport_options.md:353:Прежний единый путь `/auth/jwt/login` больше не существует (исторический контракт до
+docs/08_jwt_transport_options.md-354-внедрения двух транспортов).
+--
+docs/07_auth_token_flow_code.md-75-`get_jwt_strategy`, но разные транспорты; login/logout подключены соответственно под
+docs/07_auth_token_flow_code.md:76:`/auth/cookie/*` и `/auth/bearer/*`. Ранее использовавшийся префикс `/auth/jwt/*` — прошлый
+docs/07_auth_token_flow_code.md-77-вариант маршрутизации, а не текущий контракт.
+--
+docs/02_architecture.md-54-
+docs/02_architecture.md:55:Стандартные маршруты управления пользователями по идентификатору не подключаются. Прежний контракт `/auth/jwt/*` устарел и заменён разделёнными префиксами `/auth/cookie/*` и `/auth/bearer/*`.
+docs/02_architecture.md-56-
+rc=0
+
+=== 2. Критерий 11: docs/12 ===
+EXISTS
+bearer_login_hits=4
+cookie_login_hits=5
+url_hits=17
+--- уникальные URL ---
+http://127.0.0.1:8000/api/v1/auth/protected
+http://127.0.0.1:8000/auth/account
+http://127.0.0.1:8000/auth/bearer/login
+http://127.0.0.1:8000/auth/bearer/logout
+http://127.0.0.1:8000/auth/cookie/login
+http://127.0.0.1:8000/auth/cookie/logout
+http://127.0.0.1:8000/auth/register
+https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Authorization
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie
+https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt
+https://fastapi.tiangolo.com/tutorial/security/simple-oauth2
+https://fastapi-users.github.io/fastapi-users/12.1/configuration/oauth
+https://www.rfc-editor.org/info/rfc7519
+https://www.rfc-editor.org/rfc/rfc6265
+https://www.rfc-editor.org/rfc/rfc6750
+date_hits=2
+
+=== 3. Критерий 13: навигатор ===
+80:| Учебный разбор dual-transport auth: cookie-поток с CSRF и bearer-поток, mermaid-схемы, curl-рецепты, внешние источники | `docs/12_auth_dual_transport_walkthrough.md` |
+rc=0
+
+=== 4. README: docs/12 и счётчик ===
+120:- [12_auth_dual_transport_walkthrough.md](docs/12_auth_dual_transport_walkthrough.md) — живой разбор browser Cookie и client Bearer потоков, CSRF, Mermaid и curl.
+
+=== 5. docs/00 и docs/01: auth/jwt как текущий ===
+rc=1

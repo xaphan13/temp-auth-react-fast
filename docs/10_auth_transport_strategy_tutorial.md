@@ -95,7 +95,11 @@ async def authenticate(request):
 
 ```python
 from core.config import settings
-from fastapi_users.authentication import AuthenticationBackend, CookieTransport
+from fastapi_users.authentication import (
+    AuthenticationBackend,
+    BearerTransport,
+    CookieTransport,
+)
 from fastapi_users.authentication.strategy import JWTStrategy
 
 cookie_transport = CookieTransport(
@@ -106,6 +110,8 @@ cookie_transport = CookieTransport(
     cookie_samesite=settings.auth_users.cookie_samesite,
 )
 
+bearer_transport = BearerTransport(tokenUrl="/auth/bearer/login")
+
 
 def get_jwt_strategy() -> JWTStrategy:
     return JWTStrategy(
@@ -115,36 +121,42 @@ def get_jwt_strategy() -> JWTStrategy:
     )
 
 
-auth_backend = AuthenticationBackend(
-    name="jwt",
+cookie_backend = AuthenticationBackend(
+    name="jwt-cookie",
     transport=cookie_transport,
+    get_strategy=get_jwt_strategy,
+)
+
+bearer_backend = AuthenticationBackend(
+    name="jwt-bearer",
+    transport=bearer_transport,
     get_strategy=get_jwt_strategy,
 )
 ```
 
-Итог:
-
-```text
-CookieTransport + JWTStrategy
-```
+Итог: два backend'а на общей `JWTStrategy` — `CookieTransport + JWTStrategy` для браузера
+и `BearerTransport + JWTStrategy` для не-браузерных клиентов.
 
 ### 3.2. Маршруты
 
-В `fastapi-application/auth_users/router.py` backend подключается под префиксом:
+В `fastapi-application/auth_users/router.py` backend'ы подключаются под своими префиксами:
 
 ```python
-router.include_router(auth_router, prefix="/auth/jwt", tags=["auth-jwt"])
+router.include_router(cookie_auth_router, prefix="/auth/cookie", tags=["auth-cookie"])
+router.include_router(bearer_auth_router, prefix="/auth/bearer", tags=["auth-bearer"])
 ```
 
 Отсюда реальные endpoints:
 
 ```text
-POST /auth/jwt/login
-POST /auth/jwt/logout
+POST /auth/cookie/login
+POST /auth/cookie/logout
+POST /auth/bearer/login
+POST /auth/bearer/logout
 ```
 
-`name="jwt"` — имя backend внутри `fastapi-users`; оно само по себе не добавляет
-`/jwt` в URL. URL задаёт `prefix` в `include_router`.
+`name="jwt-cookie"` и `name="jwt-bearer"` — имена backend'ов внутри `fastapi-users`;
+они сами по себе не добавляют сегмент в URL. URL задаёт `prefix` в `include_router`.
 
 ### 3.3. Frontend
 
@@ -166,7 +178,7 @@ Frontend не читает JWT и не добавляет `Authorization`. Бр�
 ### 4.1. Поток login
 
 ```text
-1. Browser → POST /auth/jwt/login
+1. Browser → POST /auth/cookie/login
 2. Server проверяет login/password
 3. Strategy создаёт token
 4. CookieTransport отвечает Set-Cookie
@@ -177,7 +189,7 @@ Frontend не читает JWT и не добавляет `Authorization`. Бр�
 Пример HTTP:
 
 ```http
-POST /auth/jwt/login
+POST /auth/cookie/login
 Content-Type: application/x-www-form-urlencoded
 
 username=user@example.com&password=correct-password
@@ -188,7 +200,12 @@ username=user@example.com&password=correct-password
 ```http
 HTTP/1.1 204 No Content
 Set-Cookie: auth=<JWT>; Max-Age=86400; HttpOnly; SameSite=Lax; Path=/
+Set-Cookie: csrf_token=<nonce>.<signature>; Max-Age=86400; SameSite=Lax; Path=/
 ```
+
+Вместе с `auth` backend выдаёт cookie `csrf_token` (без `HttpOnly`, чтобы SPA мог
+прочитать её через `document.cookie`). Значение подписано HMAC-SHA256 — это реализация
+Signed Double Submit Cookie (см. `auth_users/csrf.py`).
 
 Следующий запрос:
 
@@ -270,57 +287,35 @@ Authorization: Bearer <TOKEN>
 
 ### 5.2. Backend: Bearer + JWTStrategy
 
-Это **вариант развития**, в текущем проекте второй backend не подключён:
+**Текущий код проекта** — `bearer_backend` уже подключён в
+`fastapi-application/auth_users/auth_backend.py` рядом с `cookie_backend`. Оба
+используют общий `get_jwt_strategy`:
 
 ```python
-from fastapi_users.authentication import AuthenticationBackend, BearerTransport
-from fastapi_users.authentication.strategy import JWTStrategy
-
-bearer_transport = BearerTransport(
-    tokenUrl="auth/bearer/login",
-)
-
-
-def get_bearer_jwt_strategy() -> JWTStrategy:
-    return JWTStrategy(
-        secret=settings.web.secret_key,
-        lifetime_seconds=900,
-        algorithm="HS256",
-    )
-
+# Текущий код проекта
+bearer_transport = BearerTransport(tokenUrl="/auth/bearer/login")
 
 bearer_backend = AuthenticationBackend(
-    name="bearer-jwt",
+    name="jwt-bearer",
     transport=bearer_transport,
-    get_strategy=get_bearer_jwt_strategy,
+    get_strategy=get_jwt_strategy,
 )
 ```
 
-`tokenUrl` — подсказка для OpenAPI/Swagger UI. Сам путь задаётся там, где auth-router
-подключается:
+`tokenUrl` — подсказка для OpenAPI/Swagger UI. Путь `/auth/bearer` задаётся
+в `router.py` через `prefix` при `include_router`.
+
+Оба backend'а передаются в объект `FastAPIUsers`:
 
 ```python
-bearer_auth_router = fastapi_users.get_auth_router(bearer_backend)
-router.include_router(
-    bearer_auth_router,
-    prefix="/auth/bearer",
-    tags=["auth-bearer"],
-)
-```
-
-Если bearer backend добавляется в список `FastAPIUsers`, защищённые dependencies
-могут принимать backend'ы согласно конфигурации authenticator:
-
-```python
+# Текущий код проекта (fastapi_users_obj.py)
 fastapi_users = FastAPIUsers[User, UUID](
     get_user_manager,
-    [auth_backend, bearer_backend],
+    [cookie_backend, bearer_backend],
 )
 ```
 
-В реальном проекте это потребует согласованной правки `auth_users` и проверки
-OpenAPI-маршрутов; пример здесь показывает принцип, а не утверждает, что код уже
-подключён.
+Защищённые dependencies (`active_user`) перебирают backend'ы в порядке cookie → bearer.
 
 ### 5.3. Frontend/API-клиент для Bearer
 

@@ -7,13 +7,19 @@
 - auth-слой находится в `fastapi-application/auth_users/`;
 - пользователь хранится в таблице `user`, идентификатор — UUID;
 - пароль хешируется перед записью в базу, исходный пароль не сохраняется;
-- вход и выход работают через JWT в HttpOnly-cookie `auth`;
+- реализованы два транспорта авторизации на общей `JWTStrategy`:
+  - `CookieTransport` (`/auth/cookie/login`, `/auth/cookie/logout`) — браузерный поток, JWT в HttpOnly-cookie `auth`, плюс cookie `csrf_token` для Signed Double Submit Cookie CSRF;
+  - `BearerTransport` (`/auth/bearer/login`, `/auth/bearer/logout`) — не-браузерные клиенты, JSON `access_token` в теле ответа, передача через `Authorization: Bearer`;
+- CSRF-защита реализована в `auth_users/csrf.py` (`CSRFMiddleware`): state-changing запросы (POST, PATCH, DELETE и т.д.) при наличии auth-cookie требуют заголовок `X-CSRF-Token`, совпадающий с подписью cookie `csrf_token`; смешанный запрос (cookie + Bearer одновременно) также проходит CSRF-проверку;
 - frontend использует `credentials: 'include'` и не хранит JWT в `localStorage`;
 - после login frontend отдельно вызывает `GET /users/me` и кладёт только объект пользователя в `AuthContext`;
-- `GET /api/v1/auth/protected` демонстрирует независимую backend-проверку через `active_user`;
+- `GET /api/v1/auth/protected` демонстрирует независимую backend-проверку через `active_user` (перебор backend'ов cookie → bearer);
 - users-router ограничен `/users/me` (GET/PATCH), без `/users/{id}`;
 - `/auth/account` изменяет `username` и `email` авторизованного пользователя;
-- logout удаляет cookie в браузере, но не отзывает ранее скопированный stateless JWT.
+- logout удаляет cookie в браузере, но не отзывает ранее скопированный stateless JWT;
+- OpenAPI содержит 25 path-ключей.
+
+Прежний единый контракт `/auth/jwt/*` устарел и заменён двумя раздельными префиксами.
 
 ## Приоритетные следующие шаги
 
@@ -25,9 +31,10 @@
 - включать `APP__AUTH_USERS__COOKIE_SECURE=true` при работе по HTTPS;
 - проверить proxy headers и фактическую схему запроса;
 - ограничить CORS при разделении frontend и API по разным origin;
-- определить CSRF-модель для cookie-аутентификации, особенно если изменятся `SameSite` и схема размещения;
 - добавить rate limit на login и register;
 - не использовать dev-секрет и учебные credentials в production.
+
+CSRF-модель (Signed Double Submit Cookie) уже реализована в `CSRFMiddleware`; при изменении `SameSite` или схемы размещения потребуется сверка с текущей логикой `auth_users/csrf.py`.
 
 ### 2. Email verification и reset password
 
@@ -75,43 +82,88 @@
 
 Не следует описывать avatar upload как уже работающий сценарий, пока backend endpoint его не принимает.
 
-## Минимальная ручная проверка cookie-flow
+## Минимальная ручная проверка cookie-flow и bearer-flow
 
 Команды выполняются из `fastapi-application/` при запущенном приложении. Cookie сохраняется в `/tmp/auth.cookies` только для проверки командой `curl`.
 
+### Cookie-поток (браузерный)
+
 ```bash
+# Анонимные запросы — ожидаем 401
 curl -i http://127.0.0.1:8000/users/me
 curl -i http://127.0.0.1:8000/api/v1/auth/protected
 
+# Регистрация
 curl -i -c /tmp/auth.cookies \
   -X POST http://127.0.0.1:8000/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com","password":"password123"}'
 
+# Cookie-login: ожидаем 204 + Set-Cookie: auth=... + Set-Cookie: csrf_token=...
 curl -i -c /tmp/auth.cookies -b /tmp/auth.cookies \
-  -X POST http://127.0.0.1:8000/auth/jwt/login \
+  -X POST http://127.0.0.1:8000/auth/cookie/login \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   --data 'username=user@example.com&password=password123'
 
+# Защищённые запросы с cookie — ожидаем 200
 curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/users/me
 curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/api/v1/auth/protected
 
+# State-changing запрос БЕЗ X-CSRF-Token — ожидаем 403
 curl -i -b /tmp/auth.cookies \
   -X POST http://127.0.0.1:8000/auth/account \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   --data 'username=authuser&email=user@example.com'
 
+# Извлечь значение csrf_token из cookie и передать в заголовке
+CSRF=$(grep csrf_token /tmp/auth.cookies | awk '{print $NF}')
+
+# State-changing запрос С X-CSRF-Token — ожидаем успех
 curl -i -b /tmp/auth.cookies \
-  -X POST http://127.0.0.1:8000/auth/jwt/logout
+  -X POST http://127.0.0.1:8000/auth/account \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H "X-CSRF-Token: ${CSRF}" \
+  --data 'username=authuser&email=user@example.com'
+
+# Cookie-logout с CSRF — ожидаем 204
+curl -i -b /tmp/auth.cookies \
+  -X POST http://127.0.0.1:8000/auth/cookie/logout \
+  -H "X-CSRF-Token: ${CSRF}"
+
+# После logout — снова 401
+curl -i -b /tmp/auth.cookies http://127.0.0.1:8000/api/v1/auth/protected
+```
+
+### Bearer-поток (не-браузерный)
+
+```bash
+# Bearer-login: ожидаем 200 + {"access_token":"...","token_type":"bearer"}
+curl -i -X POST http://127.0.0.1:8000/auth/bearer/login \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data 'username=user@example.com&password=password123'
+
+# Сохранить токен
+TOKEN="<значение access_token из ответа>"
+
+# Защищённый запрос с Bearer — ожидаем 200
+curl -i -H "Authorization: Bearer ${TOKEN}" http://127.0.0.1:8000/api/v1/auth/protected
+curl -i -H "Authorization: Bearer ${TOKEN}" http://127.0.0.1:8000/users/me
+
+# Bearer-logout — ожидаем 204
+curl -i -X POST -H "Authorization: Bearer ${TOKEN}" http://127.0.0.1:8000/auth/bearer/logout
 ```
 
 Ожидаемый порядок:
 
 - анонимные `/users/me` и `/api/v1/auth/protected` возвращают `401`;
 - register возвращает `201` и не логинит автоматически;
-- login возвращает `204` и `Set-Cookie: auth=...`;
-- `/users/me` и protected с cookie возвращают `200`;
-- logout возвращает `204` и очищает cookie;
+- cookie-login возвращает `204` и `Set-Cookie: auth=...` + `Set-Cookie: csrf_token=...`;
+- bearer-login возвращает `200` и JSON `{"access_token":"...","token_type":"bearer"}`;
+- `/users/me` и protected с cookie или Bearer возвращают `200`;
+- state-changing cookie-запрос без `X-CSRF-Token` возвращает `403`;
+- cookie-logout с `X-CSRF-Token` возвращает `204` и очищает cookie;
 - повторный защищённый запрос после logout снова возвращает `401`.
 
-Проверка должна подтверждать именно HTTP-заголовки и cookie-flow, а не только наличие объекта `user` в React.
+Проверка должна подтверждать именно HTTP-заголовки и cookie/bearer-flow, а не только наличие объекта `user` в React.
+
+</content>

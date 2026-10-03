@@ -38,13 +38,14 @@ Catch-all добавляется последним. Для путей `/api` и
 
 Для `GET /users/me`, `POST /auth/account` или `GET /api/v1/auth/protected`:
 
-1. Клиент отправляет cookie `auth` с JWT (`credentials: 'include'`).
-2. Dependency `active_user` извлекает и проверяет JWT.
+1. Клиент отправляет cookie `auth` с JWT (`credentials: 'include'`) либо заголовок `Authorization: Bearer <token>`.
+2. Dependency `active_user` перебирает backend'ы в порядке cookie → bearer, извлекает и проверяет JWT.
 3. `get_user_manager()` получает `SQLAlchemyUserDatabase` поверх `CurrentSession`.
 4. Пользователь загружается из таблицы `user`; невалидный/просроченный токен даёт 401.
-5. Обработчик выполняет чтение или изменение.
+5. Для cookie state-changing запросов (POST/PATCH/PUT/DELETE) `CSRFMiddleware` требует заголовок `X-CSRF-Token`, совпадающий с cookie `csrf_token`; отсутствие или несовпадение даёт 403.
+6. Обработчик выполняет чтение или изменение.
 
-`GET /api/v1/auth/protected` возвращает JSON с подтверждением доступа и auth-данными пользователя. Отсутствие cookie даёт JSON 401 независимо от client-side `RequireAuth`.
+`GET /api/v1/auth/protected` возвращает JSON с подтверждением доступа и auth-данными пользователя. Отсутствие валидных учётных данных даёт JSON 401 независимо от client-side `RequireAuth`.
 
 ## Вход и регистрация
 
@@ -54,19 +55,23 @@ Catch-all добавляется последним. Для путей `/api` и
 
 Успех — 201 с `UserRead`; пользователь автоматически не входит.
 
-### Вход
+### Вход (CookieTransport — браузер)
 
-`POST /auth/jwt/login` принимает `application/x-www-form-urlencoded`:
+`POST /auth/cookie/login` принимает `application/x-www-form-urlencoded`:
 
 ```text
 username=<email>&password=<пароль>
 ```
 
-Успех — 204 и `Set-Cookie: auth=...`. React после 204 вызывает `GET /users/me`, чтобы получить профиль.
+Успех — 204 и два заголовка `Set-Cookie`: `auth=...` (HttpOnly, содержит JWT) и `csrf_token=...` (Signed Double Submit Cookie). React после 204 вызывает `GET /users/me`, чтобы получить профиль. Все последующие state-changing запросы с auth-cookie обязаны передавать значение `csrf_token` в заголовке `X-CSRF-Token`; без него `CSRFMiddleware` возвращает 403.
+
+### Вход (BearerTransport — не-браузерные клиенты)
+
+`POST /auth/bearer/login` принимает те же form-данные. Успех — 200 и JSON `{"access_token":"...","token_type":"bearer"}`. Клиент передаёт токен в заголовке `Authorization: Bearer <token>`. CSRF-проверка не применяется, если в запросе нет auth-cookie.
 
 ### Выход
 
-`POST /auth/jwt/logout` очищает cookie. Клиент не зависит от тела ответа и сбрасывает пользователя в `AuthContext`.
+`POST /auth/cookie/logout` очищает обе cookie (`auth` и `csrf_token`). Требует заголовок `X-CSRF-Token` при наличии auth-cookie. `POST /auth/bearer/logout` возвращает 204 без изменения cookie. Клиент не зависит от тела ответа и сбрасывает пользователя в `AuthContext`.
 
 ## Account и аватар
 
@@ -89,6 +94,7 @@ username=<email>&password=<пароль>
 | Дубликат email при регистрации | 400 `REGISTER_USER_ALREADY_EXISTS` |
 | Пароль короче 8 символов | 400 `REGISTER_INVALID_PASSWORD` |
 | Невалидный JSON/form | 422 FastAPI/fastapi-users |
+| State-changing cookie-запрос без `X-CSRF-Token` | 403 `CSRFMiddleware` |
 | Неизвестный `/api/*` путь | JSON 404 от catch-all |
 | Нет frontend/dist для обычного browser-пути | JSON 404 с подсказкой `npm run build` |
 
@@ -97,8 +103,10 @@ username=<email>&password=<пароль>
 ```bash
 cd fastapi-application
 ../.venv/bin/python -c "from main import main_app; print(len(main_app.openapi()['paths']))"
-# 23
+# 25
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/docs
 curl -s http://127.0.0.1:8000/users/me
 curl -s http://127.0.0.1:8000/api/v1/auth/protected
 ```
+
+</content>

@@ -1,12 +1,13 @@
 # 08. Способы передачи JWT: cookie, Bearer и кастомный заголовок
 
 Документ — про **транспорт токена**: каким способом выданный credential попадает от клиента
-обратно на сервер. Текущая реализация (cookie `auth` + `CookieTransport` + `JWTStrategy`) —
-в [`docs/04_authorization.md`](04_authorization.md), диаграммы и рантайм-граф — в
-[`docs/06_auth_visual.md`](06_auth_visual.md), список невыполненного — в
+обратно на сервер. Текущая реализация двух транспортов — cookie `auth` через `CookieTransport`
+и JSON Bearer через `BearerTransport` на общей `JWTStrategy` — описана в
+[`docs/04_authorization.md`](04_authorization.md), диаграммы и рантайм-граф — в
+[`docs/06_auth_visual.md`](06_auth_visual.md), список дальнейших улучшений — в
 [`docs/05_authorization_upgrade.md`](05_authorization_upgrade.md).
-Пошаговый разбор текущего cookie-потока с полным кодом фронта и бэка —
-[`docs/07_auth_token_flow_code.md`](07_auth_token_flow_code.md).
+Пошаговый разбор обоих потоков с полным кодом фронта и бэка —
+[`docs/12_auth_dual_transport_walkthrough.md`](12_auth_dual_transport_walkthrough.md).
 
 Прицел документа: у API планируется **отдельное клиентское приложение** (другой origin или
 вообще не браузер), которое тоже должно авторизоваться. Поэтому сравнение ведётся не «что лучше
@@ -40,10 +41,12 @@
   независимые решения (тот же JWT можно отдавать cookie'й или в JSON без правок стратегии;
   переход на серверное состояние с настоящим отзывом делается отдельно).
 
-В проекте выбрано: `CookieTransport` + `JWTStrategy`, `name="jwt"`
-(`auth_users/auth_backend.py`), а путь `/auth/jwt` задаётся **вручную** в `auth_users/router.py`:
-`router.include_router(auth_router, prefix="/auth/jwt", tags=["auth-jwt"])`. Имя backend'а в
-путь не попадает — это важно для раздела 7.2.
+В проекте выбрано **два backend'а** на общей `JWTStrategy` (`auth_users/auth_backend.py`):
+`cookie_backend` (`CookieTransport`, `name="jwt-cookie"`) подключён под префиксом
+`/auth/cookie`, и `bearer_backend` (`BearerTransport`, `name="jwt-bearer"`) — под префиксом
+`/auth/bearer` (`auth_users/router.py`). Имя backend'а в путь не попадает — оно используется
+только в именах операций OpenAPI (`auth:jwt-cookie.login`, `auth:jwt-bearer.login`).
+OpenAPI-счётчик: 25 path-ключей.
 
 ---
 
@@ -99,11 +102,11 @@ Redis-стратегия действительно есть в установл
 
 ---
 
-## 3. Вариант A. HttpOnly cookie (текущее состояние проекта)
+## 3. Вариант A. HttpOnly cookie (один из двух текущих транспортов)
 
 ### 3.1. Как это работает
 
-1. Клиент шлёт форму на `/auth/jwt/login` (`application/x-www-form-urlencoded`, `username`/`password`).
+1. Клиент шлёт форму на `/auth/cookie/login` (`application/x-www-form-urlencoded`, `username`/`password`).
 2. Backend проверяет пароль, `JWTStrategy.write_token()` подписывает JWT, `CookieTransport`
    отвечает `204` и заголовком
    `Set-Cookie: auth=<JWT>; Max-Age=86400; HttpOnly; SameSite=Lax; Path=/`.
@@ -125,7 +128,9 @@ Application → Cookies, Network → Request Headers; разбор — в `docs/
 ### 3.3. Минусы
 
 - **CSRF.** Браузер прикладывает cookie сам. `SameSite=Lax` отсекает cross-site POST, но не
-  заменяет CSRF-модель; в проекте CSRF-защиты нет (разделы 7.3, 7.7).
+  заменяет CSRF-модель; в проекте реализована защита Signed Double Submit Cookie
+  (`auth_users/csrf.py`): при login выдаётся cookie `csrf_token`, а state-changing запросы
+  с auth-cookie требуют заголовок `X-CSRF-Token` (разделы 7.3, 7.7).
 - **Привязка к origin.** Сценарий «SPA на `app.example.com`, API на `api.example.com`»
   требует решений по `cookie_domain`, `SameSite`, CORS.
 - **CORS с credentials.** Нужны `Access-Control-Allow-Credentials: true` и точный
@@ -179,11 +184,11 @@ Content-Type: application/json
 объявлен **необязательным**, поэтому и curl без него (`docs/05`), и стандартные OAuth2-клиенты
 с ним работают; fastapi-users это поле не использует.
 
-### 4.2. Как это выглядело бы
+### 4.2. Как это устроено в текущем проекте
 
-В проекте это **не включено**: к текущему `CookieTransport` добавляется второй транспорт и
-второй backend с `name="bearer"` и той же `get_jwt_strategy` (полный код — раздел 8.1,
-подключение и пути — раздел 7.2).
+В проекте уже подключены два транспорта: `CookieTransport` и `BearerTransport`. Оба backend-а
+используют одну `get_jwt_strategy`; полный фрагмент фактического подключения приведён в
+разделе 8.1, а порядок выбора — в разделе 7.2.
 
 ### 4.3. Где хранить токен на клиенте
 
@@ -271,10 +276,10 @@ class HeaderTransport(Transport):
 
 ## 6. Сравнительная таблица
 
-| Критерий | Cookie `auth` (текущий) | `Authorization: Bearer` | Кастомный заголовок |
+| Критерий | Cookie `auth` | `Authorization: Bearer` | Кастомный заголовок |
 |---|---|---|---|
 | Защита от кражи токена через XSS | высокая (HttpOnly недоступен JS) | зависит от хранения: `localStorage` — низкая, память — средняя | как у Bearer |
-| Защита от CSRF | нужна отдельная (сейчас нет) | не нужна | не нужна |
+| Защита от CSRF | реализована Signed Double Submit Cookie | не нужна без auth-cookie | не нужна |
 | CORS-credentials | нужен `Allow-Credentials` + точный `Allow-Origin` | не нужен | не нужен |
 | Другой origin | `SameSite=None; Secure` + CSRF-пересборка | работает | работает (+ preflight) |
 | Не-браузерный клиент (мобильный, CLI, сервер-сервер) | неудобно (ручной cookie-jar) | родной сценарий | родной, но нужен свой SDK |
@@ -330,20 +335,23 @@ async def logout(...):
 ```
 
 То есть пути в роутере — ровно `/login` и `/logout`; `backend.name` попадает только в имя
-операции OpenAPI (`auth:jwt.login`). Путь задаёт вызывающий код через `prefix`:
+операции OpenAPI (`auth:jwt-cookie.login`, `auth:jwt-bearer.login`). Путь задаёт вызывающий код
+через `prefix`:
 
 ```python
-# ПРИМЕР ДЛЯ РАЗВИТИЯ — в проект не внесён.
-router.include_router(auth_router,   prefix="/auth/jwt",    tags=["auth-jwt"])     # как сейчас
-router.include_router(bearer_router, prefix="/auth/bearer", tags=["auth-bearer"])  # новый путь
+# ФАКТИЧЕСКОЕ ПОДКЛЮЧЕНИЕ В ПРОЕКТЕ (auth_users/router.py):
+router.include_router(cookie_auth_router,  prefix="/auth/cookie", tags=["auth-cookie"])
+router.include_router(bearer_auth_router,  prefix="/auth/bearer", tags=["auth-bearer"])
 
-# и второй backend в списке: /users/me начинает принимать оба credential'а
-fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend, bearer_backend])
+# оба backend'а в списке: /users/me принимает оба credential'а
+fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [cookie_backend, bearer_backend])
 ```
 
-Итог: `/auth/jwt/login` (cookie, `204` + `Set-Cookie`) и `/auth/bearer/login` (JSON с
+Итог: `/auth/cookie/login` (cookie, `204` + `Set-Cookie`) и `/auth/bearer/login` (JSON с
 `access_token`) работают одновременно, а `current_user`, `active_user`, `optional_user`,
 `superuser_user` из `auth_users/fastapi_users_obj.py` обслуживают любой из двух credential'ов.
+Прежний единый путь `/auth/jwt/login` больше не существует (исторический контракт до
+внедрения двух транспортов).
 
 ### 7.3. CSRF при cookie-варианте
 
@@ -352,6 +360,12 @@ fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [auth_backend, bearer
 **double-submit cookie** (тот же токен в cookie и в заголовке, сверка значений) и проверка
 `Origin`/`Referer` как дополнительный, но не единственный слой. `SameSite=Lax` эту модель не
 отменяет — он лишь сужает множество cross-site запросов.
+
+В проекте реализован Signed Double Submit Cookie (`auth_users/csrf.py`): `CSRFMiddleware`
+проверяет state-changing запросы (POST/PUT/PATCH/DELETE) при наличии auth-cookie `auth`.
+Требуется точное совпадение cookie `csrf_token` и заголовка `X-CSRF-Token` плюс валидная
+HMAC-SHA256-подпись. Наличие заголовка `Authorization` не освобождает от проверки, если
+auth-cookie тоже присутствует — иначе Bearer создавал бы обход cookie-защиты.
 
 ### 7.4. CORS для браузерного клиента с другого origin
 
@@ -384,65 +398,115 @@ OAuth2 **`client_credentials`** (короткий TTL, права через sco
 
 ### 7.6. Рецепт выбора
 
-- **SPA на том же origin, что API** (текущее состояние) → cookie `HttpOnly` + `SameSite=Lax/Strict`:
-  максимальная защита от XSS, минимум клиентского кода.
+- **SPA на том же origin, что API** → cookie `HttpOnly` + `SameSite=Lax/Strict`:
+  максимальная защита от XSS, минимум клиентского кода. В проекте этот поток обслуживает
+  `cookie_backend` (`/auth/cookie/login`, `/auth/cookie/logout`).
 - **SPA на своём домене, API на другом** → либо Bearer (токен в памяти + свой refresh: короткий
   access + долгий refresh в `HttpOnly`-cookie домена API), либо cookie с корректным CORS
   (`точный Allow-Origin` + `Allow-Credentials`), `SameSite=None; Secure` и обязательной CSRF-защитой.
-- **Мобильное / нативное / CLI** → Bearer + SecureStore/Keychain/файл с правами 600.
+- **Мобильное / нативное / CLI** → Bearer + SecureStore/Keychain/файл с правами 600. В проекте
+  этот поток обслуживает `bearer_backend` (`/auth/bearer/login`, `/auth/bearer/logout`).
 - **Сервер → сервер** → `client_credentials` или API-ключ с отдельным слоем проверки прав.
 
-### 7.7. Чего в текущем проекте нет
+### 7.7. Что уже реализовано и что остаётся улучшить
 
-Пробелы для перехода на multi-client (см. [`docs/05_authorization_upgrade.md`](05_authorization_upgrade.md)):
+В текущем проекте уже есть оба backend-а (`jwt-cookie` и `jwt-bearer`) на общей JWT-стратегии,
+а для cookie-потока работает `CSRFMiddleware` с Signed Double Submit Cookie. Остаются отдельные
+инфраструктурные улучшения для production и multi-origin:
 
-- **Нет CORS-middleware** — ни `CORSMiddleware`, ни `allow_origins`; сейчас не мешает, потому что
-  frontend и backend отдаются одним приложением (`core/setup_frontend.py`).
-- **Нет CSRF-защиты** — при `SameSite=Lax` и same-origin достаточно, при `None` нужна модель.
+- **Нет CORS-middleware** — сейчас frontend и backend отдаются одним приложением
+  (`core/setup_frontend.py`), поэтому same-origin сценарий не требует CORS.
 - **Нет refresh-токенов** — единственный credential это 24-часовой JWT.
-- **Нет отзыва токенов** — `JWTStrategy.destroy_token` не реализован, logout только удаляет cookie.
+- **Нет отзыва токенов** — `JWTStrategy.destroy_token` не реализован, logout только удаляет cookie
+  или прекращает использование bearer-токена клиентом.
 - **`cookie_secure=False`** — при HTTPS включить `True`.
-- **Один backend** (`name="jwt"`, cookie) в `auth_users/fastapi_users_obj.py`.
 - **Один секрет на всё**: `settings.web.secret_key` подписывает и JWT авторизации, и токены
-  сброса пароля/verification (`auth_users/user_manager.py`).
+  сброса пароля/verification (`auth_users/user_manager.py`), и HMAC-подпись CSRF-токенов
+  (`auth_users/csrf.py`).
 
-Переход на «отдельное приложение-клиент» — это не «добавить Bearer», а пакет работ: второй
-backend, CORS (или CSRF-модель), решение про refresh и отзыв, `Secure=true`, отдельный секрет.
+Переход на multi-origin — это отдельная работа: CORS, `Secure=true`, проверка origin и
+production-политика хранения/отзыва токенов; добавление Bearer уже выполнено.
 
 ---
 
 ## 8. Мини-примеры
 
-Всё ниже — **иллюстрация вариантов**, в проект ничего из этого не внесено. Текущее состояние
-остаётся: cookie `auth`, `CookieTransport` + `JWTStrategy`, `name="jwt"`.
+Разделы 8.1 и 8.3 показывают **фактическую реализацию** проекта (dual-transport). Раздел 8.2 —
+иллюстрация клиентского кода для Bearer-потока. Раздел 5 (кастомный заголовок) остаётся
+примером для развития и в проект не внесён.
 
-### 8.1. Backend: cookie + Bearer рядом
+### 8.1. Backend: cookie + Bearer рядом (фактическая реализация)
 
-Минимальная правка `auth_users/auth_backend.py` — второй транспорт и второй backend (контекст —
-разделы 4.2 и 7.2):
+Оба транспорта и backend'а определены в `auth_users/auth_backend.py`:
 
 ```python
-# ПРИМЕР ДЛЯ РАЗВИТИЯ — в проект не внесён.
-from fastapi_users.authentication import BearerTransport
+# ФАКТИЧЕСКИЙ КОД ПРОЕКТА (auth_users/auth_backend.py)
+from core.config import settings
+from fastapi_users.authentication import (
+    AuthenticationBackend,
+    BearerTransport,
+    CookieTransport,
+)
+from fastapi_users.authentication.strategy import JWTStrategy
 
-# tokenUrl — подсказка Swagger UI; путь определяется префиксом в router.py.
-bearer_transport = BearerTransport(tokenUrl="auth/bearer/login")
+cookie_transport = CookieTransport(
+    cookie_name=settings.auth_users.cookie_name,
+    cookie_max_age=settings.auth_users.cookie_max_age,
+    cookie_secure=settings.auth_users.cookie_secure,
+    cookie_httponly=settings.auth_users.cookie_httponly,
+    cookie_samesite=settings.auth_users.cookie_samesite,
+)
+
+bearer_transport = BearerTransport(tokenUrl="/auth/bearer/login")
+
+
+def get_jwt_strategy() -> JWTStrategy:
+    return JWTStrategy(
+        secret=settings.web.secret_key,
+        lifetime_seconds=settings.auth_users.jwt_lifetime_seconds,
+        algorithm=settings.auth_users.jwt_algorithm,
+    )
+
+
+cookie_backend = AuthenticationBackend(
+    name="jwt-cookie",
+    transport=cookie_transport,
+    get_strategy=get_jwt_strategy,
+)
 
 bearer_backend = AuthenticationBackend(
-    name="bearer",
+    name="jwt-bearer",
     transport=bearer_transport,
-    get_strategy=get_jwt_strategy,   # та же стратегия: содержимое токена одинаковое
+    get_strategy=get_jwt_strategy,
 )
 ```
 
-Дальше — подключение (ориентиры `auth_users/router.py` и `auth_users/fastapi_users_obj.py`):
-`get_auth_router(bearer_backend)` под `prefix="/auth/bearer"` и второй backend в списке
-`FastAPIUsers[User, UUID](get_user_manager, [auth_backend, bearer_backend])`.
+Подключение маршрутов в `auth_users/router.py`:
+
+```python
+# ФАКТИЧЕСКИЙ КОД ПРОЕКТА (auth_users/router.py)
+cookie_auth_router = fastapi_users.get_auth_router(cookie_backend)
+bearer_auth_router = fastapi_users.get_auth_router(bearer_backend)
+
+router = APIRouter()
+router.include_router(cookie_auth_router, prefix="/auth/cookie", tags=["auth-cookie"])
+router.include_router(bearer_auth_router, prefix="/auth/bearer", tags=["auth-bearer"])
+```
+
+Регистрация обоих backend'ов в `auth_users/fastapi_users_obj.py`:
+
+```python
+# ФАКТИЧЕСКИЙ КОД ПРОЕКТА (auth_users/fastapi_users_obj.py)
+fastapi_users = FastAPIUsers[User, UUID](get_user_manager, [cookie_backend, bearer_backend])
+```
+
+Порядок в списке имеет значение: `Authenticator` перебирает backend'ы слева направо
+(cookie → bearer), и первый успешный побеждает.
 
 ### 8.2. Frontend: Bearer-вариант в стиле `api/client.ts` / `api/auth.ts`
 
 ```ts
-// ПРИМЕР ДЛЯ РАЗВИТИЯ — в проект не внесён.
+// ПРИМЕР ДЛЯ РАЗВИТИЯ — иллюстрация клиентского Bearer-потока.
 // Токен намеренно в модульной переменной (память), а НЕ в localStorage:
 // localStorage читается любой сторонней строкой JS, и одна XSS-инъекция
 // уносит долгоживущий токен целиком.
@@ -477,23 +541,24 @@ Refresh-токенов в fastapi-users нет: это отдельная раз
 
 ### 8.3. curl: оба варианта
 
-Cookie — актуально сегодня:
+Cookie — state-changing запросы с auth-cookie требуют `X-CSRF-Token` (значение из cookie
+`csrf_token`, выдаётся при login):
 
 ```bash
-# login: 204 + Set-Cookie: auth=<JWT>; cookie сохраняется в файл
-curl -i -c /tmp/cookies.txt -X POST http://127.0.0.1:8000/auth/jwt/login \
+# login: 204 + Set-Cookie: auth=<JWT> + Set-Cookie: csrf_token=<token>
+curl -i -c /tmp/cookies.txt -X POST http://127.0.0.1:8000/auth/cookie/login \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   --data 'username=user@example.com&password=password123'
 
 curl -s -b /tmp/cookies.txt http://127.0.0.1:8000/users/me
-curl -s -b /tmp/cookies.txt http://127.0.0.1:8000/api/v1/auth/protected
+# state-changing запросы с auth-cookie требуют X-CSRF-Token (значение из csrf_token cookie)
+curl -s -b /tmp/cookies.txt -H "X-CSRF-Token: <csrf_token>" http://127.0.0.1:8000/api/v1/auth/protected
 
-# logout: 204 + Set-Cookie: auth=; Max-Age=0
-curl -i -b /tmp/cookies.txt -X POST http://127.0.0.1:8000/auth/jwt/logout
+# logout: 204 + Set-Cookie: auth=; Max-Age=0 (тоже требует X-CSRF-Token)
+curl -i -b /tmp/cookies.txt -H "X-CSRF-Token: <csrf_token>" -X POST http://127.0.0.1:8000/auth/cookie/logout
 ```
 
-Bearer — для развития (соответствует backend'у из 8.1). Токен вынимается из JSON без jq —
-через `python` из `.venv` проекта:
+Bearer — токен вынимается из JSON без jq — через `python` из `.venv` проекта:
 
 ```bash
 TOKEN=$(curl -s -X POST http://127.0.0.1:8000/auth/bearer/login \
@@ -530,11 +595,15 @@ curl -i -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/auth/bea
 `Allow-Origin` при credentials (Fetch-стандарт, MDN); семантика RFC 6750 и RFC 6749; практики
 CSRF (double-submit, synchronizer token); хранение в SecureStore/Keychain.
 
-**Проверено в проекте**: `AuthUsersConfig` и `CookieTransport` в `auth_users/auth_backend.py`;
-`name="jwt"` и префикс `/auth/jwt` в `auth_users/router.py`;
-`FastAPIUsers[User, UUID](get_user_manager, [auth_backend])` в `auth_users/fastapi_users_obj.py`;
-`credentials: 'include'` в `frontend/src/api/client.ts`; отсутствие CORS-middleware в
-`fastapi-application/`; dev-прокси только на `/api` в `frontend/vite.config.ts`.
+**Проверено в проекте**: `cookie_backend` (`name="jwt-cookie"`) и `bearer_backend`
+(`name="jwt-bearer"`) на общей `get_jwt_strategy` в `auth_users/auth_backend.py`;
+префиксы `/auth/cookie` и `/auth/bearer` в `auth_users/router.py`;
+`FastAPIUsers[User, UUID](get_user_manager, [cookie_backend, bearer_backend])` в
+`auth_users/fastapi_users_obj.py`; `CSRFMiddleware` с Signed Double Submit Cookie в
+`auth_users/csrf.py` (cookie `csrf_token`, заголовок `X-CSRF-Token`, проверка state-changing
+методов при наличии auth-cookie, HMAC-SHA256 подпись); `credentials: 'include'` в
+`frontend/src/api/client.ts`; отсутствие CORS-middleware в `fastapi-application/`; dev-прокси
+только на `/api` в `frontend/vite.config.ts`.
 
 Ссылки: [`docs/04_authorization.md`](04_authorization.md) — фактический cookie-flow;
 [`docs/05_authorization_upgrade.md`](05_authorization_upgrade.md) — что не сделано;

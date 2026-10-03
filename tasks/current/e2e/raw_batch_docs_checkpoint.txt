@@ -1,0 +1,30 @@
+=== phase6 checkpoint: docs/10,11 ===
+rc=1
+
+=== docs/04: обязательные элементы ===
+/auth/cookie/login: 8
+/auth/bearer/login: 3
+X-CSRF-Token: 8
+csrf.py: 1
+
+=== docs/03, docs/05: актуальные пути ===
+docs/05_authorization_upgrade.md:4
+docs/03_execution_flow.md:2
+
+=== WARNING csrf в логе прогона ===
+WARNING: auth csrf: rejected method=POST path=/auth/cookie/logout
+/* 2026-10-03 04:12:08,232 - csrf.dispatch(133) - [MainThread] - [135267879798592] */  
+--
+WARNING: auth csrf: rejected method=PATCH path=/auth/account
+/* 2026-10-03 04:12:08,241 - csrf.dispatch(133) - [MainThread] - [135267879798592] */  
+--
+WARNING: auth csrf: rejected method=PATCH path=/auth/account
+/* 2026-10-03 04:12:08,430 - csrf.dispatch(133) - [MainThread] - [135267879798592] */  
+
+=== user_manager debug-строки (был repr) ===
+DEBUG: auth_users: get_user_manager enter
+DEBUG: auth_users: get_user_manager exit
+INFO: auth_users: registered qa_88791910@example.com
+
+=== docs/05: X-CSRF-Token в рецептах ===
+7

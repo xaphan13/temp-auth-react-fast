@@ -1,0 +1,21 @@
+=== Ретест 2 (adversary-покрытие + строка старта) ===
+
+--- A. Старт-строка backend'ов (перезапуск на 8032, только lifespan) ---
+2905:INFO: auth backends order: jwt-cookie -> jwt-bearer
+2915:INFO: auth backends order: jwt-cookie -> jwt-bearer
+3032:INFO: auth backends order: jwt-cookie -> jwt-bearer
+8032 stopped
+
+--- B. Подделка X-CSRF-Token (с валидного auth-cookie, PATCH /auth/account) -> ожидаем 403 ---
+fake csrf -> 405
+--- C. Повторный cookie logout (сессия уже завершена шагом 12) ---
+repeat logout -> 401
+--- D. auth-cookie БЕЗ csrf-cookie на state-changing /auth/account ---
+auth-only no-csrf-cookie -> 405
+--- E. Bearer login без CSRF (невалидные креды -> ожидаем 400, не 403) ---
+bearer login no-csrf -> 400
+--- F. Полный temp_auth.log: счётчики секретов (ожидаем 0) ---
+0
+0
+0
+0

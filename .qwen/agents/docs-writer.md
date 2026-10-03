@@ -1,7 +1,7 @@
 ---
 name: docs-writer
 description: Автор документации команды агентов. Точечно синхронизирует русскоязычные документы проекта с утверждённым контрактом задания; не меняет код и архитектурные решения.
-model: nyxos-auto/glm-5.3-flash
+model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
 approvalMode: auto-edit
 tools:
   - read_file

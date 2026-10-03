@@ -1,0 +1,37 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> auth_users/user_manager.py:12:1
+   |
+10 |   """
+11 |
+12 | / from collections.abc import AsyncGenerator
+13 | | from typing import Annotated, Any
+14 | | from uuid import UUID
+15 | |
+16 | | from fastapi_users.models import UserProtocol
+17 | |
+18 | | from config_log import logF
+19 | | from core.config import settings
+20 | | from db_core.db_async import CurrentSession
+21 | | from fastapi import Depends, Request
+22 | | from fastapi_users import BaseUserManager, UUIDIDMixin
+23 | | from fastapi_users.db import SQLAlchemyUserDatabase
+24 | | from fastapi_users.exceptions import InvalidPasswordException, UserAlreadyExists
+25 | | from sqlalchemy.exc import IntegrityError
+26 | | from sqlalchemy.ext.asyncio import AsyncSession
+27 | |
+28 | | from auth_users.models import User
+   | |__________________________________^
+help: Organize imports
+   |
+15 |
+   - from fastapi_users.models import UserProtocol
+   -
+16 | from config_log import logF
+--------------------------------------------------------------------------------
+22 | from fastapi_users.exceptions import InvalidPasswordException, UserAlreadyExists
+23 + from fastapi_users.models import UserProtocol
+24 | from sqlalchemy.exc import IntegrityError
+   |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
